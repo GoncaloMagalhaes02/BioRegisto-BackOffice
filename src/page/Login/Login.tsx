@@ -9,9 +9,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
+import {
+  Alert,
+  AlertAction,
+  AlertTitle,
+  AlertDescription,
+} from "@/components/ui/alert";
+
 import { Input } from "@/components/ui/input";
 
-import { Mail, Lock, EyeOff, Eye } from "lucide-react";
+import { Mail, Lock, EyeOff, Eye, CircleCheck } from "lucide-react";
 
 import { supabase } from "@/lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
@@ -20,14 +28,12 @@ function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState(null);
+
+  const [success, setSuccess] = useState(false);
 
   const [showPassword, setShowPassword] = useState(false);
 
   const handeLogin = async () => {
-    setLoading(true);
-    setErr(null);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -36,9 +42,14 @@ function Login() {
     if (error) {
       console.log(error.message);
     } else {
+      setSuccess(true);
       setEmail("");
       setPassword("");
       navigate("/teste");
+
+      setTimeout(() => {
+        setSuccess(false);
+      }, 2000);
     }
   };
 
@@ -124,6 +135,14 @@ function Login() {
             </Button>
           </CardFooter>
         </Card>
+        {success && (
+          <div className="grid w-full max-w-md items-start gap-4 absolute right-0 bottom-5">
+            <Alert className="max-w-md mb-2 bg-green-50 border-green-200 text-green-800 py-4 ">
+              <CircleCheck className="h-2 w-4 text-green-600" />
+              <AlertDescription>Login efetuado com sucesso!</AlertDescription>
+            </Alert>
+          </div>
+        )}
       </section>
     </>
   );
