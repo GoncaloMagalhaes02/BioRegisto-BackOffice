@@ -6,12 +6,13 @@ import {
   createRoutesFromElements,
   Route,
   RouterProvider,
+  Routes,
 } from "react-router-dom";
 
 import Login from "./page/Login/Login";
 
 const routes = createBrowserRouter(
-  createRoutesFromElements(<Route path="/" element={<Login />}></Route>),
+  createRoutesFromElements(<Route path="/" element={<Login />} />),
 );
 
 const router = createRoot(document.getElementById("root")!).render(
