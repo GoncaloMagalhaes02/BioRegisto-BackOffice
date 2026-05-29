@@ -13,18 +13,33 @@ import { Input } from "@/components/ui/input";
 
 import { Mail, Lock, EyeOff, Eye } from "lucide-react";
 
+import { supabase } from "@/lib/supabaseClient";
+import { useNavigate } from "react-router-dom";
+
 function Login() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState(null);
 
   const [showPassword, setShowPassword] = useState(false);
 
-  const handeLogin = () => {
-    console.log(email);
-    console.log(password);
-    setEmail("");
-    setPassword("");
+  const handeLogin = async () => {
+    setLoading(true);
+    setErr(null);
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      console.log(error.message);
+    } else {
+      setEmail("");
+      setPassword("");
+      navigate("/teste");
+    }
   };
 
   return (
