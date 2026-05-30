@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,36 +9,54 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
+import {
+  Alert,
+  AlertAction,
+  AlertTitle,
+  AlertDescription,
+} from "@/components/ui/alert";
+
 import { Input } from "@/components/ui/input";
 
-import { Mail, Lock, EyeOff, Eye } from "lucide-react";
+import { Mail, Lock, EyeOff, Eye, CircleCheck, CircleX } from "lucide-react";
 
 import { supabase } from "@/lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
 
 function Login() {
+  const { signIn } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState(false);
+
   const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState(null);
+
+  const [infoError, setInfoError] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
 
-  const handeLogin = async () => {
+  // Atualiza a função para receber o evento e usar preventDefault
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault(); // <- ISTO É A MAGIA QUE IMPEDE O REFRESH
     setLoading(true);
-    setErr(null);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
+    const { error } = await signIn(email, password);
     if (error) {
-      console.log(error.message);
+      setError(true);
+      setLoading(false);
+      setInfoError(error);
+      console.log(error);
+      setTimeout(() => setError(false), 3000);
     } else {
+      setSuccess(true);
       setEmail("");
       setPassword("");
-      navigate("/teste");
+      setLoading(false);
+      navigate("/");
+      setTimeout(() => setSuccess(false), 3000);
     }
   };
 
@@ -70,7 +88,7 @@ function Login() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form>
+            <form onSubmit={handleLogin}>
               <div className="flex flex-col gap-6 mt-5">
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -112,18 +130,35 @@ function Login() {
                   Esqueceu a palavra-passe?
                 </a>
               </div>
+              <CardFooter className="flex-col gap-2">
+                <Button
+                  type="submit"
+                  className="w-full bg-green-800 text-white text-lg py-5 hover:bg-green-900 hover:cursor-pointer "
+                  disabled={loading}
+                >
+                  {loading ? "A Entrar..." : "Entrar"}
+                </Button>
+              </CardFooter>
             </form>
           </CardContent>
-          <CardFooter className="flex-col gap-2">
-            <Button
-              type="submit"
-              className="w-full bg-green-800 text-white text-lg py-5 hover:bg-green-900 hover:cursor-pointer "
-              onClick={handeLogin}
-            >
-              Entrar
-            </Button>
-          </CardFooter>
         </Card>
+        {success && (
+          <div className="grid w-full max-w-md items-start gap-4 absolute right-0 bottom-5">
+            <Alert className="max-w-md mb-2 bg-green-50 border-green-200 text-green-800 py-4 ">
+              <CircleCheck className="h-2 w-4 text-green-600" />
+              <AlertDescription>Login efetuado com sucesso!</AlertDescription>
+            </Alert>
+          </div>
+        )}
+
+        {error && (
+          <div className="grid w-full max-w-md items-start gap-4 absolute right-0 bottom-5">
+            <Alert className="max-w-md mb-2 bg-red-50 border-red-200 text-red-800 py-4 ">
+              <CircleX className="h-2 w-4 text-red-600" />
+              <AlertDescription>{infoError}</AlertDescription>
+            </Alert>
+          </div>
+        )}
       </section>
     </>
   );

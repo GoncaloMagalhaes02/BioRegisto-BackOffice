@@ -6,17 +6,43 @@ import {
   createRoutesFromElements,
   Route,
   RouterProvider,
-  Routes,
 } from "react-router-dom";
 
-import Login from "./page/Login/Login";
+import { AuthProvider } from "./hooks/useAuth";
 
-const routes = createBrowserRouter(
-  createRoutesFromElements(<Route path="/" element={<Login />} />),
+// Pages
+import Dashboard from "./page/Dashboard";
+import Observations from "./page/Observations";
+import ObservationDetail from "./page/ObservationDetail";
+import Species from "./page/Species";
+import Users from "./page/Users";
+import MapPage from "./page/MapPage";
+import Statistics from "./page/Statistics";
+import Login from "./page/Login";
+import ProtectedLayout from "./layout/ProtectedLayout";
+
+const router = createBrowserRouter(
+  createRoutesFromElements(
+    <>
+      <Route path="/login" element={<Login />} />
+      {/* Rotas protegidas — todas partilham o Layout */}
+      <Route element={<ProtectedLayout />}>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/observations" element={<Observations />} />
+        <Route path="/observations/:id" element={<ObservationDetail />} />
+        <Route path="/species" element={<Species />} />
+        <Route path="/users" element={<Users />} />
+        <Route path="/map" element={<MapPage />} />
+        <Route path="/statistics" element={<Statistics />} />
+      </Route>
+    </>,
+  ),
 );
 
-const router = createRoot(document.getElementById("root")!).render(
+createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <RouterProvider router={routes} />
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
   </StrictMode>,
 );
