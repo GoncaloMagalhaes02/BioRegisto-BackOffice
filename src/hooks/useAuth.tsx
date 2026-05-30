@@ -23,7 +23,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Buscar o profile da tabela profiles
   async function fetchProfile(userId: string) {
     const { data } = await supabase
       .from("profiles")
@@ -33,18 +32,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setProfile(data);
   }
-
   useEffect(() => {
-    // 1. Ao abrir a app, verificar se já há sessão guardada
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      }
-      setLoading(false);
-    });
+    console.log("1. A verificar sessão...");
 
-    // 2. Ouvir mudanças de auth (login, logout, token refresh)
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => {
+        console.log("2. Sessão:", session);
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchProfile(session.user.id);
+        }
+        setLoading(false);
+        console.log("3. Loading = false");
+      })
+      .catch((err) => {
+        console.log("ERRO getSession:", err);
+        setLoading(false);
+      });
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -57,7 +63,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
 
-    // 3. Limpar o listener quando o componente desmonta
     return () => subscription.unsubscribe();
   }, []);
 
