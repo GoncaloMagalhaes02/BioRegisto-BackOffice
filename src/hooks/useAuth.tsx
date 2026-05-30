@@ -24,46 +24,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   async function fetchProfile(userId: string) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
 
-    setProfile(data);
+      console.log("Profile resultado:", { data, error });
+
+      if (error) {
+        console.log("ERRO ao buscar profile:", error);
+      }
+
+      setProfile(data ?? null);
+    } catch (err) {
+      console.log("ERRO fetchProfile:", err);
+      setProfile(null);
+    }
   }
-  useEffect(() => {
-    console.log("1. A verificar sessão...");
 
-    supabase.auth
-      .getSession()
-      .then(({ data: { session } }) => {
-        console.log("2. Sessão:", session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          fetchProfile(session.user.id);
-        }
-        setLoading(false);
-        console.log("3. Loading = false");
-      })
-      .catch((err) => {
-        console.log("ERRO getSession:", err);
-        setLoading(false);
-      });
+  useEffect(() => {
+    let isMounted = true;
+
+    console.log("1. Setup auth começou");
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log("onAuthStateChange:", _event, session?.user?.id ?? "null");
+
+      if (!isMounted) return;
+
       setUser(session?.user ?? null);
+
       if (session?.user) {
-        await fetchProfile(session.user.id);
+        // Sem await — corre em background, não bloqueia o callback
+        fetchProfile(session.user.id);
       } else {
         setProfile(null);
       }
+
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Função de login

@@ -8,13 +8,14 @@ import {
   Map,
   BarChart3,
   LogOut,
+  Bird,
 } from "lucide-react";
 
 // Itens de navegação
 const navItems = [
   { label: "Dashboard", path: "/", icon: LayoutDashboard },
   { label: "Observações", path: "/observations", icon: Eye },
-  { label: "Espécies", path: "/species", icon: Leaf },
+  { label: "Espécies", path: "/species", icon: Bird },
   { label: "Utilizadores", path: "/users", icon: Users },
   { label: "Mapa", path: "/map", icon: Map },
   { label: "Estatísticas", path: "/statistics", icon: BarChart3 },
@@ -76,7 +77,7 @@ export default function Sidebar() {
               {/* Badge de pendentes nas observações */}
               {item.path === "/observations" && (
                 <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">
-                  23
+                  12
                 </span>
               )}
             </Link>
