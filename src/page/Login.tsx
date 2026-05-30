@@ -19,7 +19,7 @@ import {
 
 import { Input } from "@/components/ui/input";
 
-import { Mail, Lock, EyeOff, Eye, CircleCheck } from "lucide-react";
+import { Mail, Lock, EyeOff, Eye, CircleCheck, CircleX } from "lucide-react";
 
 import { supabase } from "@/lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
@@ -30,26 +30,35 @@ function Login() {
   const [password, setPassword] = useState("");
 
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState(false);
+
+  const [loading, setLoading] = useState(false);
+
+  const [infoError, setInfoError] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
 
   const handeLogin = async () => {
+    setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
+      setError(true);
+      setLoading(false);
+      setInfoError(error.message);
       console.log(error.message);
+      setTimeout(() => setError(false), 3000);
     } else {
       setSuccess(true);
       setEmail("");
       setPassword("");
-      navigate("/teste");
+      setLoading(false);
+      navigate("/");
 
-      setTimeout(() => {
-        setSuccess(false);
-      }, 2000);
+      setTimeout(() => setSuccess(false), 3000);
     }
   };
 
@@ -130,8 +139,9 @@ function Login() {
               type="submit"
               className="w-full bg-green-800 text-white text-lg py-5 hover:bg-green-900 hover:cursor-pointer "
               onClick={handeLogin}
+              disabled={loading}
             >
-              Entrar
+              {loading ? "A Entrar..." : "Entrar"}
             </Button>
           </CardFooter>
         </Card>
@@ -140,6 +150,15 @@ function Login() {
             <Alert className="max-w-md mb-2 bg-green-50 border-green-200 text-green-800 py-4 ">
               <CircleCheck className="h-2 w-4 text-green-600" />
               <AlertDescription>Login efetuado com sucesso!</AlertDescription>
+            </Alert>
+          </div>
+        )}
+
+        {error && (
+          <div className="grid w-full max-w-md items-start gap-4 absolute right-0 bottom-5">
+            <Alert className="max-w-md mb-2 bg-red-50 border-red-200 text-red-800 py-4 ">
+              <CircleX className="h-2 w-4 text-red-600" />
+              <AlertDescription>{infoError}</AlertDescription>
             </Alert>
           </div>
         )}
