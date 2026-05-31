@@ -30,16 +30,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .select("*")
         .eq("id", userId)
         .single();
-
-      console.log("Profile resultado:", { data, error });
-
-      if (error) {
-        console.log("ERRO ao buscar profile:", error);
-      }
-
       setProfile(data ?? null);
     } catch (err) {
-      console.log("ERRO fetchProfile:", err);
       setProfile(null);
     }
   }
@@ -47,19 +39,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
-    console.log("1. Setup auth começou");
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log("onAuthStateChange:", _event, session?.user?.id ?? "null");
-
       if (!isMounted) return;
 
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        // Sem await — corre em background, não bloqueia o callback
         fetchProfile(session.user.id);
       } else {
         setProfile(null);
