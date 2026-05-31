@@ -10,6 +10,7 @@ import {
   LogOut,
   Bird,
 } from "lucide-react";
+import { useObservationStats } from "@/hooks/useObservationsStats";
 
 // Itens de navegação
 const navItems = [
@@ -24,6 +25,8 @@ const navItems = [
 export default function Sidebar() {
   const location = useLocation();
   const { profile, signOut } = useAuth();
+
+  const { pendentes } = useObservationStats();
 
   // Verificar se o item está ativo
   function isActive(path: string) {
@@ -75,9 +78,9 @@ export default function Sidebar() {
               {item.label}
 
               {/* Badge de pendentes nas observações */}
-              {item.path === "/observations" && (
+              {item.path === "/observations" && pendentes > 0 && (
                 <span className="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">
-                  12
+                  {pendentes}
                 </span>
               )}
             </Link>
