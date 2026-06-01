@@ -30,6 +30,7 @@ export interface Observation {
     latitude: number;
     longitude: number;
   };
+  suggested_species: string;
   observed_at: string;
   status: ObservationStatus;
   validated_by: string | null;
