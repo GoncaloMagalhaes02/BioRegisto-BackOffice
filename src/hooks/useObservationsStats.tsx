@@ -29,7 +29,6 @@ export function useObservationStats() {
           .select("id", { count: "exact", head: true })
           .eq("status", "REJECTED"),
       ]);
-
       setObservacoes(total.count || 0);
       setValidadas(validated.count || 0);
       setPendentes(pending.count || 0);
