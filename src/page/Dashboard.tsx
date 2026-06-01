@@ -91,7 +91,7 @@ function Dashboard() {
           <h3 className="font-semibold">
             Observações pendentes para validação
           </h3>
-          <span className="text-orange-400 border border-orange-200 font-medium bg-orange-100 px-4 py-2 rounded-lg">
+          <span className="text-orange-400 border border-orange-200 font-medium text-xs bg-orange-100 px-3 py-2 rounded-lg">
             {observations.length} pendentes
           </span>
         </div>
