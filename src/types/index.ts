@@ -12,6 +12,13 @@ export interface Profile {
   updated_at: string;
 }
 
+export interface Photo {
+  id: string;
+  url: string;
+  is_primary: boolean;
+  order_index: number;
+}
+
 export type ObservationStatus = "PENDING" | "VALIDATED" | "REJECTED";
 
 export interface Observation {
@@ -37,6 +44,6 @@ export interface Observation {
     full_name: string | null;
     avatar_url: string | null;
   };
+  photos?: Photo[];
   species?: { scientific_name: string; common_name_pt: string };
-  photos?: Array<{ id: string; url: string; is_primary: boolean }>;
 }

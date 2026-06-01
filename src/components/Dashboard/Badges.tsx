@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 
 import { Eye, CircleCheck, Clock, CircleX } from "lucide-react";
 
@@ -7,6 +7,7 @@ import { useObservationStats } from "@/hooks/useObservationsStats";
 function Badges() {
   const { observacoes, pendentes, rejeitadas, validadas } =
     useObservationStats();
+
   return (
     <>
       <div className="grid grid-cols-2 gap-6 mt-6">
