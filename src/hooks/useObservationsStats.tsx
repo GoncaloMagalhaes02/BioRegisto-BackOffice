@@ -6,6 +6,9 @@ export function useObservationStats() {
   const [validadas, setValidadas] = useState(0);
   const [pendentes, setPendentes] = useState(0);
   const [rejeitadas, setRejeitadas] = useState(0);
+
+  const [status, setStatus] = useState("");
+  const [reinos, setReinos] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadStats = async () => {
@@ -40,8 +43,24 @@ export function useObservationStats() {
     }
   };
 
+  const loadReinos = async () => {
+    try {
+      const { data, error } = await supabase.from("species").select("kingdom");
+
+      if (error) throw error;
+
+      // Remover duplicados
+      const unique = [...new Set(data.map((s) => s.kingdom))];
+      console.log(unique);
+      setReinos(unique);
+    } catch (error) {
+      console.log("Erro ao buscar reinos:", error);
+    }
+  };
+
   useEffect(() => {
     loadStats();
+    loadReinos();
   }, []);
 
   return {
@@ -50,6 +69,7 @@ export function useObservationStats() {
     pendentes,
     rejeitadas,
     loading,
+    reinos,
     refetch: loadStats,
   };
 }
