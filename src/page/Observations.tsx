@@ -198,7 +198,9 @@ export default function Observations() {
 
       <div className="mt-5">
         <Table className="bg-white">
-          <TableCaption>Lista de Observações</TableCaption>
+          <TableCaption className="mt-3 pb-3">
+            Lista de Observações
+          </TableCaption>
           <TableHeader className="bg-stone-100">
             <TableRow>
               <TableHead>Foto</TableHead>
@@ -212,29 +214,52 @@ export default function Observations() {
           </TableHeader>
           <TableBody>
             {observations.length > 0 ? (
-              paginatedObservations.map((obs) => (
-                <TableRow key={obs.id}>
-                  <TableCell>foto</TableCell>
-                  <TableCell>{obs.suggested_species}</TableCell>
-                  <TableCell>@{obs.username}</TableCell>
-                  <TableCell>
-                    {obs.latitude?.toFixed(4)} | {obs.longitude?.toFixed(4)}
-                  </TableCell>
-                  <TableCell>{formatDate(obs.created_at)}</TableCell>
-                  <TableCell>
-                    <StatusBadge status={obs.status} />
-                  </TableCell>
-                  <TableCell>
-                    <Eye strokeWidth={1.5} />
-                  </TableCell>
-                </TableRow>
-              ))
+              <>
+                {paginatedObservations.map((obs) => (
+                  <TableRow key={obs.id} className="h-[60px]">
+                    <TableCell>foto</TableCell>
+                    <TableCell>{obs.suggested_species}</TableCell>
+                    <TableCell>@{obs.username}</TableCell>
+                    <TableCell>
+                      {obs.latitude?.toFixed(4)} | {obs.longitude?.toFixed(4)}
+                    </TableCell>
+                    <TableCell>{formatDate(obs.created_at)}</TableCell>
+                    <TableCell>
+                      <StatusBadge status={obs.status} />
+                    </TableCell>
+                    <TableCell>
+                      <Eye strokeWidth={1.5} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+
+                {Array.from({
+                  length: itemsPerPage - paginatedObservations.length,
+                }).map((_, i) => (
+                  <TableRow
+                    key={`empty-${i}`}
+                    className="h-[60px] hover:bg-transparent border-none"
+                  >
+                    <TableCell colSpan={7}></TableCell>
+                  </TableRow>
+                ))}
+              </>
             ) : (
-              <TableRow>
-                <TableCell colSpan={7}>
-                  Não há observações disponíveis.
-                </TableCell>
-              </TableRow>
+              <>
+                {Array.from({ length: itemsPerPage }).map((_, i) => (
+                  <TableRow
+                    key={`empty-${i}`}
+                    className={`h-[60px] hover:bg-transparent ${i > 0 ? "border-none" : ""}`}
+                  >
+                    <TableCell
+                      colSpan={7}
+                      className={i === 0 ? "text-center text-stone-400" : ""}
+                    >
+                      {i === 0 ? "Não há observações disponíveis." : ""}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </>
             )}
           </TableBody>
         </Table>
