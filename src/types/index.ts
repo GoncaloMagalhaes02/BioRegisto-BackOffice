@@ -24,27 +24,27 @@ export type ObservationStatus = "PENDING" | "VALIDATED" | "REJECTED";
 export interface Observation {
   id: string;
   user_id: string;
-  species_id: string | null;
   description: string;
-  location: {
-    latitude: number;
-    longitude: number;
-  };
-  suggested_species: string;
+  suggested_species: string | null;
+  species_id: string | null;
   observed_at: string;
   status: ObservationStatus;
-  validated_by: string | null;
-  validated_at: string | null;
+  is_public: boolean;
   rejection_reason: string | null;
   technician_notes: string | null;
-  is_public: boolean;
+  validated_at: string | null;
+  validated_by: string | null;
   created_at: string;
   updated_at: string;
-  profiles?: {
-    username: string;
-    full_name: string | null;
-    avatar_url: string | null;
-  };
-  photos?: Photo[];
-  species?: { scientific_name: string; common_name_pt: string };
+  // PostGIS extraído
+  latitude: number | null;
+  longitude: number | null;
+  // Join profiles
+  username: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
+  // Join species
+  scientific_name: string | null;
+  common_name_pt: string | null;
+  kingdom: string | null;
 }
