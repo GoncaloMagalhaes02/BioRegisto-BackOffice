@@ -127,7 +127,7 @@ function Dashboard() {
                         <a className="bg-green-700 px-3 py-2 rounded-lg text-white font-semibold cursor-pointer">
                           Validar
                         </a>
-                        <a className="text-orange-400 border border-orange-200 font-medium bg-orange-100 px-3 py-2 rounded-lg cursor-pointer">
+                        <a className="text-orange-400 border border-orange-200 font-medium bg-orange-50 px-3 py-2 rounded-lg cursor-pointer">
                           Rejeitar
                         </a>
                       </div>

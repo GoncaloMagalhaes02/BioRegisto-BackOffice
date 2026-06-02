@@ -49,7 +49,7 @@ export default function Observations() {
   const [observations, setObservations] = useState<Observation[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const itemsPerPage = 5;
+  const itemsPerPage = 8;
 
   // Paginação
   const totalPages = Math.ceil(observations.length / itemsPerPage);
@@ -210,7 +210,7 @@ export default function Observations() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
             <Input
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 w-full"
+              className="pl-9 w-full bg-white"
               placeholder="Procure por espécie"
             />
           </div>
