@@ -63,44 +63,23 @@ export default function Observations() {
 
     const fetchObservations = async () => {
       try {
-        let query = supabase
-          .from("observations")
-          .select(
-            `
-          *,
-          profiles!observations_user_id_fkey ( username, full_name, avatar_url ),
-          species ( scientific_name, common_name_pt, kingdom ),
-          photos ( id, url, is_primary, order_index )
-        `,
-          )
-          .order("observed_at", { ascending: false });
+        const { data, error } = await supabase.rpc("get_observations", {
+          p_status: estado !== "ALL" ? estado : null,
+          p_kingdom: reino !== "ALL" ? reino : null,
+          p_date_from: getDateFrom(timeRange),
+        });
 
-        if (estado !== "ALL") {
-          query = query.eq("status", estado);
-        }
-
-        const dateFrom = getDateFrom(timeRange);
-        if (dateFrom) {
-          query = query.gte("observed_at", dateFrom);
-        }
-
-        const { data, error } = await query;
-        console.log(data);
         if (error) throw error;
 
         let filtered = data || [];
-
-        if (reino !== "ALL") {
-          filtered = filtered.filter((obs) => obs.species?.kingdom === reino);
-        }
 
         if (search.trim() !== "") {
           const term = search.toLowerCase();
           filtered = filtered.filter(
             (obs) =>
               obs.suggested_species?.toLowerCase().includes(term) ||
-              obs.species?.scientific_name?.toLowerCase().includes(term) ||
-              obs.species?.common_name_pt?.toLowerCase().includes(term) ||
+              obs.scientific_name?.toLowerCase().includes(term) ||
+              obs.common_name_pt?.toLowerCase().includes(term) ||
               obs.description?.toLowerCase().includes(term),
           );
         }
@@ -223,9 +202,9 @@ export default function Observations() {
           <TableHeader className="bg-stone-100">
             <TableRow>
               <TableHead>Foto</TableHead>
-              <TableHead>Especie Sugerida</TableHead>
+              <TableHead>Espécie Sugerida</TableHead>
               <TableHead>Utilizador</TableHead>
-              <TableHead>Local</TableHead>
+              <TableHead>Localização</TableHead>
               <TableHead>Data</TableHead>
               <TableHead>Estado</TableHead>
               <TableHead>Ações</TableHead>
@@ -236,19 +215,17 @@ export default function Observations() {
               paginatedObservations.map((obs) => (
                 <TableRow key={obs.id}>
                   <TableCell>foto</TableCell>
+                  <TableCell>{obs.suggested_species}</TableCell>
+                  <TableCell>@{obs.username}</TableCell>
                   <TableCell>
-                    {obs.suggested_species !== null
-                      ? obs.suggested_species
-                      : "null"}
+                    {obs.latitude?.toFixed(4)} | {obs.longitude?.toFixed(4)}
                   </TableCell>
-                  <TableCell>@{obs.profiles?.username}</TableCell>
-                  <TableCell>{obs.location}</TableCell>
                   <TableCell>{formatDate(obs.created_at)}</TableCell>
                   <TableCell>
                     <StatusBadge status={obs.status} />
                   </TableCell>
                   <TableCell>
-                    <Eye />
+                    <Eye strokeWidth={1.5} />
                   </TableCell>
                 </TableRow>
               ))

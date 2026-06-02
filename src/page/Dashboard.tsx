@@ -37,22 +37,16 @@ function Dashboard() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
-
   useEffect(() => {
     if (authLoading || !user) return;
 
     const getPendingObservations = async () => {
       try {
-        const { data, error } = await supabase
-          .from("observations")
-          .select(
-            `
-            *,
-            profiles!observations_user_id_fkey ( username, full_name, avatar_url ),
-            photos ( id, url, is_primary, order_index )
-            `,
-          )
-          .eq("status", "PENDING");
+        const { data, error } = await supabase.rpc("get_observations", {
+          p_status: "PENDING",
+          p_kingdom: null,
+          p_date_from: null,
+        });
         if (error) throw error;
         setObservations(data || []);
       } catch (error) {
@@ -96,50 +90,57 @@ function Dashboard() {
           </span>
         </div>
 
-        <Table>
-          <TableHeader className="bg-stone-100">
-            <TableRow>
-              <TableHead>Foto</TableHead>
-              <TableHead>Utilizador</TableHead>
-              <TableHead>Descrição</TableHead>
-              <TableHead>Data</TableHead>
-              <TableHead>Localização</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-        </Table>
-
-        <div className="h-[350px]">
+        <div className="min-h-[350px]">
           <Table>
+            <TableHeader className="bg-stone-100">
+              <TableRow>
+                <TableHead>Foto</TableHead>
+                <TableHead>Utilizador</TableHead>
+                <TableHead>Descrição</TableHead>
+                <TableHead>Data</TableHead>
+                <TableHead>Localização</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
             <TableBody>
               {paginatedObservations.length > 0 ? (
-                paginatedObservations.map((obs) => (
-                  <TableRow key={obs.id}>
-                    <TableCell>Foto</TableCell>
-                    <TableCell>{obs.profiles?.username}</TableCell>
-                    <TableCell>{obs.description}</TableCell>
-                    <TableCell>{formatDate(obs.observed_at)}</TableCell>
-                    <TableCell>
-                      {obs.location.latitude + " | " + obs.location.longitude}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <a className="bg-green-700 px-3 py-2 rounded-lg text-white font-semibold cursor-pointer">
-                          Validar
-                        </a>
-                        <a className="text-orange-400 border border-orange-200 font-medium bg-orange-50 px-3 py-2 rounded-lg cursor-pointer">
-                          Rejeitar
-                        </a>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                <>
+                  {paginatedObservations.map((obs) => (
+                    <TableRow key={obs.id} className="h-[68px]">
+                      <TableCell>Foto</TableCell>
+                      <TableCell>{obs.username}</TableCell>
+                      <TableCell>{obs.description}</TableCell>
+                      <TableCell>{formatDate(obs.observed_at)}</TableCell>
+                      <TableCell>
+                        {obs.latitude + " | " + obs.longitude}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <a className="bg-green-700 px-3 py-2 rounded-lg text-white font-semibold cursor-pointer">
+                            Validar
+                          </a>
+                          <a className="text-orange-400 border border-orange-200 font-medium bg-orange-50 px-3 py-2 rounded-lg cursor-pointer">
+                            Rejeitar
+                          </a>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+
+                  {Array.from({
+                    length: itemsPerPage - paginatedObservations.length,
+                  }).map((_, i) => (
+                    <TableRow
+                      key={`empty-${i}`}
+                      className="h-[68px] hover:bg-transparent"
+                    >
+                      <TableCell colSpan={6}></TableCell>
+                    </TableRow>
+                  ))}
+                </>
               ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="text-center py-8 text-stone-400"
-                  >
+                <TableRow className="h-[68px]">
+                  <TableCell colSpan={6} className="text-center text-stone-400">
                     Nenhuma observação pendente
                   </TableCell>
                 </TableRow>
