@@ -13,13 +13,13 @@ import { AuthProvider } from "./hooks/useAuth";
 // Pages
 import Dashboard from "./page/Dashboard";
 import Observations from "./page/Observations";
-import ObservationDetail from "./page/ObservationDetail";
 import Species from "./page/Species";
 import Users from "./page/Users";
 import MapPage from "./page/MapPage";
 import Statistics from "./page/Statistics";
 import Login from "./page/Login";
 import ProtectedLayout from "./layout/ProtectedLayout";
+import ValidateObservation from "./page/ValidateObservation";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -29,7 +29,7 @@ const router = createBrowserRouter(
       <Route element={<ProtectedLayout />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/observations" element={<Observations />} />
-        <Route path="/observations/:id" element={<ObservationDetail />} />
+        <Route path="/observations/:id" element={<ValidateObservation />} />
         <Route path="/species" element={<Species />} />
         <Route path="/users" element={<Users />} />
         <Route path="/map" element={<MapPage />} />

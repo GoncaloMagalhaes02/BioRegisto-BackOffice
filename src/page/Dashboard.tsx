@@ -23,6 +23,7 @@ import {
 
 import { type Observation } from "@/types";
 import { supabase } from "@/lib/supabaseClient";
+import { Link } from "react-router-dom";
 
 function Dashboard() {
   const { profile, user, loading: authLoading } = useAuth();
@@ -81,11 +82,11 @@ function Dashboard() {
       <Badges />
 
       <section className="mt-9 bg-white rounded-lg border border-stone-200 flex flex-col">
-        <div className="flex w-full items-center justify-between py-6 px-5">
+        <div className="flex w-full items-center justify-between p-5">
           <h3 className="font-semibold">
             Observações pendentes para validação
           </h3>
-          <span className="text-orange-400 border border-orange-200 font-medium text-xs bg-orange-100 px-3 py-2 rounded-lg">
+          <span className="text-orange-400 border border-orange-200 font-medium text-xs bg-orange-50 px-3 py-2 rounded-lg">
             {observations.length} pendentes
           </span>
         </div>
@@ -116,12 +117,18 @@ function Dashboard() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <a className="bg-green-700 px-3 py-2 rounded-lg text-white font-semibold cursor-pointer">
+                          <Link
+                            to={`/observations/${obs.id}`}
+                            className="bg-green-800 px-3 py-2 rounded-lg text-white font-semibold cursor-pointer"
+                          >
                             Validar
-                          </a>
-                          <a className="text-orange-400 border border-orange-200 font-medium bg-orange-50 px-3 py-2 rounded-lg cursor-pointer">
+                          </Link>
+                          <Link
+                            to={`/observations/${obs.id}`}
+                            className="text-orange-400 border border-orange-200 font-medium bg-orange-50 px-3 py-2 rounded-lg cursor-pointer"
+                          >
                             Rejeitar
-                          </a>
+                          </Link>
                         </div>
                       </TableCell>
                     </TableRow>
