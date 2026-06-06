@@ -20,6 +20,7 @@ import Statistics from "./page/Statistics";
 import Login from "./page/Login";
 import ProtectedLayout from "./layout/ProtectedLayout";
 import ValidateObservation from "./page/ValidateObservation";
+import DetailUser from "./page/DetailUser";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -32,6 +33,7 @@ const router = createBrowserRouter(
         <Route path="/observations/:id" element={<ValidateObservation />} />
         <Route path="/species" element={<Species />} />
         <Route path="/users" element={<Users />} />
+        <Route path="/users/:id" element={<DetailUser />} />
         <Route path="/map" element={<MapPage />} />
         <Route path="/statistics" element={<Statistics />} />
       </Route>

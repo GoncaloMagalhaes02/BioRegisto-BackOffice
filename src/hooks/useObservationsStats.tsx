@@ -51,7 +51,6 @@ export function useObservationStats() {
 
       // Remover duplicados
       const unique = [...new Set(data.map((s) => s.kingdom))];
-      console.log(unique);
       setReinos(unique);
     } catch (error) {
       console.log("Erro ao buscar reinos:", error);

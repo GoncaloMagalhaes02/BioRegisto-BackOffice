@@ -2,7 +2,7 @@ import StatusBadge from "@/components/StatusBadge";
 import { supabase } from "@/lib/supabaseClient";
 import { MoveLeft, Search } from "lucide-react";
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { type Observation } from "@/types";
 import { Input } from "@/components/ui/input";
 
@@ -10,6 +10,7 @@ function ValidateObservation() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [observation, setObservation] = useState<Observation | null>(null);
+  const [userStats, setUserStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const getObservationById = async (id: string | undefined) => {
     if (!id) return;
@@ -18,9 +19,7 @@ function ValidateObservation() {
       const { data, error } = await supabase
         .rpc("get_observation_by_id", { p_id: id })
         .single();
-
       if (error) throw error;
-
       // Fotos separadas
       const { data: photos } = await supabase
         .from("photos")
@@ -36,9 +35,30 @@ function ValidateObservation() {
     }
   };
 
+  const getUserStats = async (id: string | undefined) => {
+    const { data, error } = await supabase.rpc("get_user_observation_stats", {
+      p_observation_id: id,
+    });
+
+    if (error) throw error;
+    console.log(data);
+    setUserStats(data);
+  };
+
   useEffect(() => {
     getObservationById(id);
+    getUserStats(id);
   }, [id]);
+
+  function formatDate(date: string | Date) {
+    return new Intl.DateTimeFormat("pt-PT", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(date));
+  }
 
   if (loading) return <p>A carregar...</p>;
   if (!observation) return <p>Observação não encontrada</p>;
@@ -103,6 +123,14 @@ function ValidateObservation() {
                 </p>
               </div>
               <div>
+                <p className="text-xs text-stone-500 uppercase">
+                  Data da observação
+                </p>
+                <p className="mt-1 text-sm">
+                  {formatDate(observation.created_at)}
+                </p>
+              </div>
+              <div>
                 <p className="text-xs text-stone-500 uppercase mt-1">
                   Coordenadas GPS
                 </p>
@@ -128,7 +156,25 @@ function ValidateObservation() {
               <h3 className="font-medium mb-4">Observador</h3>
               <div className="border border-stone-100 p-3 flex flex-col items-center">
                 <p>{observation.full_name}</p>
-                <p>{observation.username}</p>
+                <p className="text-green-700">@{observation.username}</p>
+                <div className="flex gap-2 border border-stone-200 py-2 px-5 rounded-3xl mt-3">
+                  <p className="text-xs text-stone-500 font-semibold">
+                    {userStats[0].total_observations > 0 &&
+                      userStats[0].total_observations + " observações"}
+                  </p>
+                  <p className="text-xs text-stone-500 font-semibold">
+                    {userStats[0].validated_observations > 0 &&
+                      " . " +
+                        userStats[0].validated_observations +
+                        " validadas"}
+                  </p>
+                </div>
+                <Link
+                  to={`/users/${observation.user_id}`}
+                  className="mt-3 w-full border border-stone-200 text-center py-1"
+                >
+                  Ver perfil
+                </Link>
               </div>
             </section>
           </div>
