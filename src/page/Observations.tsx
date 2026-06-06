@@ -37,6 +37,7 @@ import {
 
 import { type Observation } from "@/types";
 import StatusBadge from "@/components/StatusBadge";
+import { Link } from "react-router-dom";
 
 export default function Observations() {
   const { loading: authLoading, user } = useAuth();
@@ -228,7 +229,9 @@ export default function Observations() {
                       <StatusBadge status={obs.status} />
                     </TableCell>
                     <TableCell>
-                      <Eye strokeWidth={1.5} />
+                      <Link to={`/observations/${obs.id}`}>
+                        <Eye strokeWidth={1.5} />
+                      </Link>
                     </TableCell>
                   </TableRow>
                 ))}

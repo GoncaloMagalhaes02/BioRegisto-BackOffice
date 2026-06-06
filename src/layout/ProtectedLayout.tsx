@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import Sidebar from "./Sidebar";
+import { Toaster } from "sonner";
 
 export default function ProtectedLayout() {
   const { user, profile, loading } = useAuth();
@@ -32,6 +33,7 @@ export default function ProtectedLayout() {
       <Sidebar />
       <main className="flex-1 bg-stone-50 p-6">
         <Outlet />
+        <Toaster position="top-right" richColors />
       </main>
     </div>
   );
