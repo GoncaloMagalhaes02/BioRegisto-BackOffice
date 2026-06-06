@@ -5,6 +5,10 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { type Observation } from "@/types";
 import { Input } from "@/components/ui/input";
+import ObservationMap from "./ObservationMap";
+import SpeciesSearch from "@/components/SpeciesSearch";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 function ValidateObservation() {
   const { id } = useParams();
@@ -12,6 +16,14 @@ function ValidateObservation() {
   const [observation, setObservation] = useState<Observation | null>(null);
   const [userStats, setUserStats] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const { user } = useAuth();
+  const [selectedSpecies, setSelectedSpecies] = useState<string | null>(null);
+  const [notes, setNotes] = useState("");
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [showRejectInput, setShowRejectInput] = useState(false);
+
   const getObservationById = async (id: string | undefined) => {
     if (!id) return;
     try {
@@ -43,6 +55,68 @@ function ValidateObservation() {
     if (error) throw error;
     console.log(data);
     setUserStats(data);
+  };
+
+  const handleValidate = async () => {
+    if (!selectedSpecies) {
+      toast.error("Seleciona uma espécie antes de validar.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.rpc("validate_observation", {
+        p_observation_id: id,
+        p_technician_id: user?.id,
+        p_species_id: selectedSpecies,
+        p_notes: notes || null,
+      });
+
+      if (error) throw error;
+      toast.success("Observação validada com sucesso!", {
+        description: "O utilizador será notificado.",
+      });
+
+      // Atualizar o estado local
+      setObservation((prev) =>
+        prev ? { ...prev, status: "VALIDATED" } : prev,
+      );
+    } catch (error) {
+      console.log("Erro ao validar:", error);
+      toast.error("Erro ao validar observação.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!rejectionReason.trim()) {
+      toast.error("Indica o motivo da rejeição.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.rpc("reject_observation", {
+        p_observation_id: id,
+        p_technician_id: user?.id,
+        p_rejection_reason: rejectionReason,
+        p_notes: notes || null,
+      });
+
+      if (error) throw error;
+      toast.success("Observação rejeitada.", {
+        description: "O utilizador foi notificado com o motivo.",
+      });
+
+      setObservation((prev) => (prev ? { ...prev, status: "REJECTED" } : prev));
+      setShowRejectInput(false);
+    } catch (error) {
+      console.log("Erro ao rejeitar:", error);
+      toast.error("Erro ao rejeitar observação.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   useEffect(() => {
@@ -149,7 +223,14 @@ function ValidateObservation() {
           <div className="grid grid-cols-2 gap-6">
             <section className="bg-white rounded-lg border border-stone-200 p-6">
               <h3 className="font-medium mb-4">Localização</h3>
-              {/* mapa */}
+              {observation.latitude && observation.longitude ? (
+                <ObservationMap
+                  latitude={observation.latitude}
+                  longitude={observation.longitude}
+                />
+              ) : (
+                <p className="text-stone-400 text-sm">Sem localização</p>
+              )}
             </section>
             {/* Perfil */}
             <section className="bg-white rounded-lg border border-stone-200 p-6">
@@ -181,34 +262,102 @@ function ValidateObservation() {
         </div>
 
         {/* Coluna direita — ocupa 1/3 */}
+        {/* Coluna direita — ocupa 1/3 */}
         <div className="space-y-6">
           {/* Classificação taxonómica */}
           <section className="bg-white rounded-lg border border-stone-200 p-6">
             <h3 className="font-medium mb-4">Classificação taxonómica</h3>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
-              <Input
-                placeholder="Pesquisar espécie"
-                className="pl-9 w-full bg-white"
-              />
-            </div>
+            <SpeciesSearch
+              onSelect={(species) => setSelectedSpecies(species?.id ?? null)}
+              disabled={observation.status !== "PENDING"}
+            />
           </section>
 
           {/* Notas do técnico */}
           <section className="bg-white rounded-lg border border-stone-100 p-6">
             <h3 className="font-medium mb-4">Notas do técnico</h3>
             <textarea
-              className="w-full border border-stone-300 rounded-lg p-2"
+              className="w-full border border-stone-300 rounded-lg p-2 text-sm"
               rows={3}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Adicionar notas sobre esta observação..."
+              disabled={observation.status !== "PENDING"}
             />
           </section>
 
+          {/* Input de rejeição (aparece ao clicar rejeitar) */}
+          {showRejectInput && (
+            <section className="bg-white rounded-lg border border-red-200 p-6">
+              <h3 className="font-medium mb-4 text-red-600">
+                Motivo da rejeição
+              </h3>
+              <textarea
+                className="w-full border border-red-200 rounded-lg p-2 text-sm"
+                rows={3}
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Explica ao utilizador porque a observação foi rejeitada..."
+                autoFocus
+              />
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={handleReject}
+                  disabled={submitting}
+                  className={`flex-1 py-2 rounded-lg text-sm ${
+                    submitting
+                      ? "bg-stone-200 text-stone-400 cursor-not-allowed"
+                      : "bg-red-600 text-white cursor-pointer hover:bg-red-700"
+                  }`}
+                >
+                  {submitting ? "A processar..." : "Confirmar rejeição"}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowRejectInput(false);
+                    setRejectionReason("");
+                  }}
+                  className="flex-1 py-2 rounded-lg text-sm border border-stone-200 text-stone-600 cursor-pointer hover:bg-stone-50"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </section>
+          )}
+
           {/* Botões de ação */}
           <section className="bg-white rounded-lg border border-stone-200 p-6 space-y-3">
-            <button className="w-full bg-[#2D5A3D] text-white py-3 rounded-lg">
-              Validar observação
+            <p className="text-xs text-stone-400">
+              {observation.status === "PENDING"
+                ? "Ao validar, a espécie é obrigatória. Ao rejeitar, será pedido um motivo."
+                : `Esta observação já foi ${observation.status === "VALIDATED" ? "validada" : "rejeitada"}.`}
+            </p>
+            <button
+              onClick={handleValidate}
+              disabled={observation.status !== "PENDING" || submitting}
+              className={`w-full py-3 rounded-lg font-medium ${
+                observation.status === "PENDING" && !submitting
+                  ? "bg-[#2D5A3D] text-white cursor-pointer hover:bg-[#1f4a2d]"
+                  : "bg-stone-200 text-stone-400 cursor-not-allowed"
+              }`}
+            >
+              {submitting ? "A processar..." : "Validar observação"}
             </button>
-            <button className="w-full border border-red-200 text-red-600 py-3 rounded-lg">
+            <button
+              onClick={() => setShowRejectInput(true)}
+              disabled={
+                observation.status !== "PENDING" ||
+                submitting ||
+                showRejectInput
+              }
+              className={`w-full py-3 rounded-lg font-medium ${
+                observation.status === "PENDING" &&
+                !submitting &&
+                !showRejectInput
+                  ? "border border-red-200 text-red-600 cursor-pointer hover:bg-red-50"
+                  : "bg-stone-200 text-stone-400 cursor-not-allowed"
+              }`}
+            >
               Rejeitar observação
             </button>
           </section>
