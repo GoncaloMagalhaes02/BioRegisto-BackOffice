@@ -5,11 +5,10 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  SelectLabel,
 } from "@/components/ui/select";
 
 import { Input } from "@/components/ui/input";
-import { Eye, Search, UserStar } from "lucide-react";
+import { Eye, Search } from "lucide-react";
 
 import { useObservationStats } from "@/hooks/useObservationsStats";
 import { useEffect, useState } from "react";
@@ -39,6 +38,10 @@ import { type Observation } from "@/types";
 import StatusBadge from "@/components/StatusBadge";
 import { Link } from "react-router-dom";
 
+interface ObservationWithPhoto extends Observation {
+  photo_url: string | null;
+}
+
 export default function Observations() {
   const { loading: authLoading, user } = useAuth();
   const { reinos } = useObservationStats();
@@ -47,12 +50,11 @@ export default function Observations() {
   const [reino, setReino] = useState("ALL");
   const [timeRange, setTimeRange] = useState("ALL");
   const [search, setSearch] = useState("");
-  const [observations, setObservations] = useState<Observation[]>([]);
+  const [observations, setObservations] = useState<ObservationWithPhoto[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const itemsPerPage = 8;
+  const itemsPerPage = 6;
 
-  // Paginação
   const totalPages = Math.ceil(observations.length / itemsPerPage);
   const paginatedObservations = observations.slice(
     (currentPage - 1) * itemsPerPage,
@@ -77,7 +79,7 @@ export default function Observations() {
         if (search.trim() !== "") {
           const term = search.toLowerCase();
           filtered = filtered.filter(
-            (obs) =>
+            (obs: Observation) =>
               obs.suggested_species?.toLowerCase().includes(term) ||
               obs.scientific_name?.toLowerCase().includes(term) ||
               obs.common_name_pt?.toLowerCase().includes(term) ||
@@ -85,7 +87,36 @@ export default function Observations() {
           );
         }
 
-        setObservations(filtered);
+        // Buscar primeira foto de cada observação
+        const obsIds = filtered.map((obs: Observation) => obs.id);
+
+        if (obsIds.length > 0) {
+          const { data: photos } = await supabase
+            .from("photos")
+            .select("observation_id, url")
+            .in("observation_id", obsIds)
+            .order("is_primary", { ascending: false })
+            .order("order_index", { ascending: true });
+
+          const photoMap: Record<string, string> = {};
+          photos?.forEach((p) => {
+            if (!photoMap[p.observation_id]) {
+              photoMap[p.observation_id] = p.url;
+            }
+          });
+
+          const withPhotos = filtered.map((obs: Observation) => ({
+            ...obs,
+            photo_url: photoMap[obs.id] || null,
+          }));
+
+          setObservations(withPhotos);
+        } else {
+          setObservations(
+            filtered.map((obs: Observation) => ({ ...obs, photo_url: null })),
+          );
+        }
+
         setCurrentPage(1);
       } catch (error) {
         console.log("Erro ao buscar observações:", error);
@@ -125,9 +156,7 @@ export default function Observations() {
       </header>
 
       <section className="mt-8">
-        {/* Substituição de grid por flexbox */}
         <div className="flex flex-col md:flex-row items-center gap-3">
-          {/* Estados */}
           <div className="w-full md:w-48">
             <Select onValueChange={setEstado}>
               <SelectTrigger className="w-full bg-white">
@@ -144,7 +173,6 @@ export default function Observations() {
             </Select>
           </div>
 
-          {/* Reinos */}
           <div className="w-full md:w-48">
             <Select onValueChange={setReino}>
               <SelectTrigger className="w-full bg-white">
@@ -167,7 +195,6 @@ export default function Observations() {
             </Select>
           </div>
 
-          {/* Período */}
           <div className="w-full md:w-48">
             <Select value={timeRange} onValueChange={setTimeRange}>
               <SelectTrigger className="w-full bg-white">
@@ -185,7 +212,6 @@ export default function Observations() {
             </Select>
           </div>
 
-          {/* Pesquisa (Ocupa o resto do espaço) */}
           <div className="relative w-full flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
             <Input
@@ -217,8 +243,22 @@ export default function Observations() {
             {observations.length > 0 ? (
               <>
                 {paginatedObservations.map((obs) => (
-                  <TableRow key={obs.id} className="h-[60px]">
-                    <TableCell>foto</TableCell>
+                  <TableRow key={obs.id} className="h-[60px] max-h-[60px]">
+                    <TableCell>
+                      {obs.photo_url ? (
+                        <img
+                          src={obs.photo_url}
+                          alt=""
+                          className="w-10 h-10 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center">
+                          <span className="text-stone-300 text-[10px]">
+                            Sem foto
+                          </span>
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell>{obs.suggested_species}</TableCell>
                     <TableCell>@{obs.username}</TableCell>
                     <TableCell>
@@ -241,9 +281,9 @@ export default function Observations() {
                 }).map((_, i) => (
                   <TableRow
                     key={`empty-${i}`}
-                    className="h-[60px] hover:bg-transparent border-none"
+                    className="h-[60px] max-h-[60px] hover:bg-transparent border-none"
                   >
-                    <TableCell colSpan={7}></TableCell>
+                    <TableCell colSpan={7} className="py-0"></TableCell>
                   </TableRow>
                 ))}
               </>
@@ -252,11 +292,13 @@ export default function Observations() {
                 {Array.from({ length: itemsPerPage }).map((_, i) => (
                   <TableRow
                     key={`empty-${i}`}
-                    className={`h-[60px] hover:bg-transparent ${i > 0 ? "border-none" : ""}`}
+                    className="h-[60px] max-h-[60px] hover:bg-transparent border-none"
                   >
                     <TableCell
                       colSpan={7}
-                      className={i === 0 ? "text-center text-stone-400" : ""}
+                      className={
+                        i === 0 ? "text-center text-stone-400 py-0" : "py-0"
+                      }
                     >
                       {i === 0 ? "Não há observações disponíveis." : ""}
                     </TableCell>

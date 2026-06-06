@@ -21,14 +21,14 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 
-import { type Observation } from "@/types";
+import { type ObservationWithPhoto } from "@/types";
 import { supabase } from "@/lib/supabaseClient";
 import { Link } from "react-router-dom";
 
 function Dashboard() {
   const { profile, user, loading: authLoading } = useAuth();
 
-  const [observations, setObservations] = useState<Observation[]>([]);
+  const [observations, setObservations] = useState<ObservationWithPhoto[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
@@ -50,6 +50,34 @@ function Dashboard() {
         });
         if (error) throw error;
         setObservations(data || []);
+
+        const obsIds = (data || []).map((obs: Observation) => obs.id);
+
+        if (obsIds.length > 0) {
+          const { data: photos } = await supabase
+            .from("photos")
+            .select("observation_id, url")
+            .in("observation_id", obsIds)
+            .eq("is_primary", true);
+
+          // Criar mapa de observation_id → url
+          const photoMap: Record<string, string> = {};
+          photos?.forEach((p) => {
+            if (!photoMap[p.observation_id]) {
+              photoMap[p.observation_id] = p.url;
+            }
+          });
+
+          // Associar foto a cada observação
+          const withPhotos = (data || []).map((obs: Observation) => ({
+            ...obs,
+            photo_url: photoMap[obs.id] || null,
+          }));
+
+          setObservations(withPhotos);
+        } else {
+          setObservations(data || []);
+        }
       } catch (error) {
         console.log("Erro:", error);
       }
@@ -108,7 +136,21 @@ function Dashboard() {
                 <>
                   {paginatedObservations.map((obs) => (
                     <TableRow key={obs.id} className="h-[68px]">
-                      <TableCell>Foto</TableCell>
+                      <TableCell>
+                        {obs.photo_url ? (
+                          <img
+                            src={obs.photo_url}
+                            alt=""
+                            className="w-12 h-12 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-stone-100 flex items-center justify-center">
+                            <span className="text-stone-300 text-xs">
+                              Sem foto
+                            </span>
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell>{obs.username}</TableCell>
                       <TableCell>{obs.description}</TableCell>
                       <TableCell>{formatDate(obs.observed_at)}</TableCell>
