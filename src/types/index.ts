@@ -42,7 +42,7 @@ export interface Observation {
   // Join profiles
   username: string | null;
   full_name: string | null;
-  avatar_url: string | null;
+  photos: Photo[];
   // Join species
   scientific_name: string | null;
   common_name_pt: string | null;
