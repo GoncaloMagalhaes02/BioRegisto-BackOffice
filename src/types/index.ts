@@ -48,3 +48,7 @@ export interface Observation {
   common_name_pt: string | null;
   kingdom: string | null;
 }
+
+export interface ObservationWithPhoto extends Observation {
+  photo_url: string | null;
+}
