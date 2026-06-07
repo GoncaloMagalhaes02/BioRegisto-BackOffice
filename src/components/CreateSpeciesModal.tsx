@@ -101,7 +101,7 @@ export default function CreateSpeciesModal({
       if (error) throw error;
 
       toast.success("Espécie criada com sucesso!", {
-        description: `${data.scientific_name} foi adicionada e selecionada.`,
+        description: `${data.scientific_name} foi adicionadadd.`,
       });
 
       onCreated({

@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/hooks/useAuth";
 import { Search, Pencil, Trash2, ShieldCheck, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 import {
   Select,
   SelectContent,
@@ -27,6 +28,15 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Link } from "react-router-dom";
 
 interface Species {
@@ -71,7 +81,36 @@ export default function Species() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
 
-  // Debounce da pesquisa
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("species")
+        .delete()
+        .eq("id", deleteId);
+
+      if (error) throw error;
+
+      setSpecies((prev) => prev.filter((sp) => sp.id !== deleteId));
+      toast.success("Espécie eliminada com sucesso!");
+      setDeleteId(null);
+    } catch (error: any) {
+      if (error?.code === "23503") {
+        toast.error("Não é possível eliminar esta espécie.", {
+          description: "Existem observações associadas a ela.",
+        });
+      } else {
+        toast.error("Erro ao eliminar espécie.");
+      }
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => setSearch(searchInput), 300);
     return () => clearTimeout(timer);
@@ -198,9 +237,14 @@ export default function Species() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <button className="text-stone-400 hover:text-stone-600 cursor-pointer">
-                          <Pencil size={16} />
+                          <Link to={`/species/${sp.id}`}>
+                            <Pencil size={16} />
+                          </Link>
                         </button>
-                        <button className="text-stone-400 hover:text-red-500 cursor-pointer">
+                        <button
+                          onClick={() => setDeleteId(sp.id)}
+                          className="text-stone-400 hover:text-red-500 cursor-pointer"
+                        >
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -288,6 +332,37 @@ export default function Species() {
           </div>
         )}
       </div>
+
+      <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Eliminar espécie</DialogTitle>
+            <DialogDescription>
+              Tens a certeza que queres eliminar esta espécie? Esta ação não
+              pode ser revertida.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <button
+              onClick={() => setDeleteId(null)}
+              className="px-4 py-2 rounded-lg border border-stone-200 text-stone-600 hover:bg-stone-50 cursor-pointer text-sm"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className={`px-4 py-2 rounded-lg text-sm ${
+                deleting
+                  ? "bg-stone-200 text-stone-400 cursor-not-allowed"
+                  : "bg-red-600 text-white cursor-pointer hover:bg-red-700"
+              }`}
+            >
+              {deleting ? "A eliminar..." : "Eliminar"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

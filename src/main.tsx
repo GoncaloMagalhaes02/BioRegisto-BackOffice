@@ -22,6 +22,7 @@ import ProtectedLayout from "./layout/ProtectedLayout";
 import ValidateObservation from "./page/ValidateObservation";
 import DetailUser from "./page/DetailUser";
 import CreateSpecies from "./page/CreateSpecie";
+import EditSpecies from "./page/EditSpecies";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -33,6 +34,7 @@ const router = createBrowserRouter(
         <Route path="/observations" element={<Observations />} />
         <Route path="/observations/:id" element={<ValidateObservation />} />
         <Route path="/species" element={<Species />} />
+        <Route path="/species/:id" element={<EditSpecies />} />
         <Route path="/species-create" element={<CreateSpecies />} />
         <Route path="/users" element={<Users />} />
         <Route path="/users/:id" element={<DetailUser />} />
