@@ -15,6 +15,7 @@ function ValidateObservation() {
   const navigate = useNavigate();
   const [observation, setObservation] = useState<Observation | null>(null);
   const [userStats, setUserStats] = useState([]);
+  const [speciesInfo, setSpeciesInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const { user } = useAuth();
@@ -40,6 +41,16 @@ function ValidateObservation() {
         .order("order_index");
 
       setObservation({ ...data, photos: photos || [] });
+
+      // Se a observação tem species_id, buscar dados completos da espécie
+      if (data.species_id) {
+        const { data: sp } = await supabase
+          .from("species")
+          .select("*")
+          .eq("id", data.species_id)
+          .single();
+        setSpeciesInfo(sp);
+      }
     } catch (error) {
       console.log("Erro:", error);
     } finally {
@@ -77,8 +88,18 @@ function ValidateObservation() {
       });
 
       setObservation((prev) =>
-        prev ? { ...prev, status: "VALIDATED" } : prev,
+        prev
+          ? { ...prev, status: "VALIDATED", species_id: selectedSpecies }
+          : prev,
       );
+
+      // Buscar dados da espécie recém-selecionada para mostrar a info
+      const { data: sp } = await supabase
+        .from("species")
+        .select("*")
+        .eq("id", selectedSpecies)
+        .single();
+      setSpeciesInfo(sp);
     } catch (error) {
       console.log("Erro ao validar:", error);
       toast.error("Erro ao validar observação.");
@@ -119,7 +140,6 @@ function ValidateObservation() {
 
   const handleSpeciesCreated = (species: any) => {
     setSelectedSpecies(species.id);
-    // Forçar re-render do SpeciesSearch com a espécie pré-selecionada
     setSpeciesKey((prev) => prev + 1);
   };
 
@@ -269,13 +289,50 @@ function ValidateObservation() {
           {/* Classificação taxonómica */}
           <section className="bg-white rounded-lg border border-stone-200 p-6">
             <h3 className="font-medium mb-4">Classificação taxonómica</h3>
-            <SpeciesSearch
-              key={speciesKey}
-              onSelect={(species) => setSelectedSpecies(species?.id ?? null)}
-              disabled={observation.status !== "PENDING"}
-            />
-            {observation.status === "PENDING" && !selectedSpecies && (
-              <CreateSpeciesModal onCreated={handleSpeciesCreated} />
+
+            {observation.status === "PENDING" ? (
+              <>
+                <SpeciesSearch
+                  key={speciesKey}
+                  onSelect={(species) =>
+                    setSelectedSpecies(species?.id ?? null)
+                  }
+                  disabled={false}
+                />
+                {!selectedSpecies && (
+                  <CreateSpeciesModal onCreated={handleSpeciesCreated} />
+                )}
+              </>
+            ) : speciesInfo ? (
+              <>
+                <p className="text-sm font-medium italic">
+                  {speciesInfo.scientific_name}
+                </p>
+                <p className="text-xs text-stone-400 mb-4">
+                  {speciesInfo.common_name_pt}
+                </p>
+                <div className="border-t border-stone-100 pt-3 space-y-2">
+                  {[
+                    ["Reino", speciesInfo.kingdom],
+                    ["Filo", speciesInfo.phylum],
+                    ["Classe", speciesInfo.class],
+                    ["Ordem", speciesInfo.order],
+                    ["Família", speciesInfo.family],
+                    ["Género", speciesInfo.genus],
+                  ].map(([label, value]) => (
+                    <div key={label} className="flex justify-between text-sm">
+                      <span className="text-stone-500">{label}</span>
+                      <span
+                        className={value ? "text-stone-800" : "text-stone-300"}
+                      >
+                        {value ?? "—"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="text-stone-400 text-sm">Sem espécie associada</p>
             )}
           </section>
 
