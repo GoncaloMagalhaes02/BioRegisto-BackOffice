@@ -23,6 +23,7 @@ import ValidateObservation from "./page/ValidateObservation";
 import DetailUser from "./page/DetailUser";
 import CreateSpecies from "./page/CreateSpecie";
 import EditSpecies from "./page/EditSpecies";
+import { Toaster } from "./components/ui/sonner";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -49,6 +50,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AuthProvider>
       <RouterProvider router={router} />
+      <Toaster position="top-right" richColors />
     </AuthProvider>
   </StrictMode>,
 );

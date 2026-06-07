@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { User } from "@supabase/supabase-js";
 import type { Profile } from "@/types";
+import { toast } from "sonner";
 
 interface AuthContextType {
   user: User | null;
@@ -14,26 +15,33 @@ interface AuthContextType {
   signOut: () => Promise<void>;
 }
 
-// Criar o contexto (o "canal de rádio")
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Provider — envolve a app toda, corre uma única vez
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function fetchProfile(userId: string) {
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
-      setProfile(data ?? null);
-    } catch (err) {
-      setProfile(null);
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+
+    if (error) {
+      console.log("Erro a buscar perfil:", error);
+      return;
     }
+
+    // Se a conta foi desativada enquanto estava logado, faz logout
+    if (data && !data.is_active) {
+      await supabase.auth.signOut();
+      toast.error("A sua conta foi desativada.");
+      return;
+    }
+
+    setProfile(data);
   }
 
   useEffect(() => {
@@ -61,17 +69,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Função de login
   async function signIn(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) return { error: error.message };
+    const { data: authData, error: authError } =
+      await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+    if (authError) return { error: authError.message };
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("is_active, role")
+      .eq("id", authData.user.id)
+      .single();
+
+    if (profileError) {
+      await supabase.auth.signOut();
+      return { error: "Erro ao validar conta." };
+    }
+
+    if (!profile.is_active) {
+      await supabase.auth.signOut();
+      return { error: "A sua conta foi desativada. Contacte o administrador." };
+    }
+
+    if (profile.role === "USER") {
+      await supabase.auth.signOut();
+      return {
+        error: "Acesso negado. O backoffice é apenas para técnicos e admins.",
+      };
+    }
+
     return { error: null };
   }
 
-  // Função de logout
   async function signOut() {
     await supabase.auth.signOut();
     setUser(null);
@@ -85,7 +117,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Hook para usar em qualquer componente
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {

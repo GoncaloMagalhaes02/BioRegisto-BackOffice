@@ -23,6 +23,7 @@ import { Mail, Lock, EyeOff, Eye, CircleCheck, CircleX } from "lucide-react";
 
 import { supabase } from "@/lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 function Login() {
   const { signIn } = useAuth();
@@ -40,24 +41,21 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
 
   // Atualiza a função para receber o evento e usar preventDefault
+
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault(); // <- ISTO É A MAGIA QUE IMPEDE O REFRESH
+    e.preventDefault();
     setLoading(true);
+
     const { error } = await signIn(email, password);
+
     if (error) {
-      setError(true);
+      toast.error(error);
       setLoading(false);
-      setInfoError(error);
-      console.log(error);
-      setTimeout(() => setError(false), 3000);
-    } else {
-      setSuccess(true);
-      setEmail("");
-      setPassword("");
-      setLoading(false);
-      navigate("/");
-      setTimeout(() => setSuccess(false), 3000);
+      return;
     }
+
+    toast.success("Bem-vindo!");
+    navigate("/");
   };
 
   return (
