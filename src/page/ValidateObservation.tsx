@@ -1,12 +1,12 @@
 import StatusBadge from "@/components/StatusBadge";
 import { supabase } from "@/lib/supabaseClient";
-import { MoveLeft, Search } from "lucide-react";
+import { MoveLeft } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { type Observation } from "@/types";
-import { Input } from "@/components/ui/input";
 import ObservationMap from "./ObservationMap";
 import SpeciesSearch from "@/components/SpeciesSearch";
+import CreateSpeciesModal from "@/components/CreateSpeciesModal";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
@@ -19,6 +19,7 @@ function ValidateObservation() {
 
   const { user } = useAuth();
   const [selectedSpecies, setSelectedSpecies] = useState<string | null>(null);
+  const [speciesKey, setSpeciesKey] = useState(0);
   const [notes, setNotes] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -27,12 +28,11 @@ function ValidateObservation() {
   const getObservationById = async (id: string | undefined) => {
     if (!id) return;
     try {
-      // Dados da observação via RPC (com lat/lng)
       const { data, error } = await supabase
         .rpc("get_observation_by_id", { p_id: id })
         .single();
       if (error) throw error;
-      // Fotos separadas
+
       const { data: photos } = await supabase
         .from("photos")
         .select("id, url, is_primary, order_index")
@@ -53,7 +53,6 @@ function ValidateObservation() {
     });
 
     if (error) throw error;
-    console.log(data);
     setUserStats(data);
   };
 
@@ -77,7 +76,6 @@ function ValidateObservation() {
         description: "O utilizador será notificado.",
       });
 
-      // Atualizar o estado local
       setObservation((prev) =>
         prev ? { ...prev, status: "VALIDATED" } : prev,
       );
@@ -119,6 +117,12 @@ function ValidateObservation() {
     }
   };
 
+  const handleSpeciesCreated = (species: any) => {
+    setSelectedSpecies(species.id);
+    // Forçar re-render do SpeciesSearch com a espécie pré-selecionada
+    setSpeciesKey((prev) => prev + 1);
+  };
+
   useEffect(() => {
     getObservationById(id);
     getUserStats(id);
@@ -143,7 +147,7 @@ function ValidateObservation() {
         <div className="flex gap-5 items-center">
           <button
             onClick={() => navigate(-1)}
-            className="bg-white  flex items-center px-2 py-1 rounded-lg hover:bg-stone-200 cursor-pointer"
+            className="bg-white flex items-center px-2 py-1 rounded-lg hover:bg-stone-200 cursor-pointer"
           >
             <MoveLeft className="text-stone-400 w-5" />
           </button>
@@ -215,7 +219,6 @@ function ValidateObservation() {
                     : "Sem coordenadas"}
                 </p>
               </div>
-              {/* ... */}
             </div>
           </section>
 
@@ -232,7 +235,7 @@ function ValidateObservation() {
                 <p className="text-stone-400 text-sm">Sem localização</p>
               )}
             </section>
-            {/* Perfil */}
+
             <section className="bg-white rounded-lg border border-stone-200 p-6">
               <h3 className="font-medium mb-4">Observador</h3>
               <div className="border border-stone-100 p-3 flex flex-col items-center">
@@ -240,19 +243,19 @@ function ValidateObservation() {
                 <p className="text-green-700">@{observation.username}</p>
                 <div className="flex gap-2 border border-stone-200 py-2 px-5 rounded-3xl mt-3">
                   <p className="text-xs text-stone-500 font-semibold">
-                    {userStats[0].total_observations > 0 &&
+                    {userStats[0]?.total_observations > 0 &&
                       userStats[0].total_observations + " observações"}
                   </p>
                   <p className="text-xs text-stone-500 font-semibold">
-                    {userStats[0].validated_observations > 0 &&
-                      " . " +
+                    {userStats[0]?.validated_observations > 0 &&
+                      " · " +
                         userStats[0].validated_observations +
                         " validadas"}
                   </p>
                 </div>
                 <Link
                   to={`/users/${observation.user_id}`}
-                  className="mt-3 w-full border border-stone-200 text-center py-1"
+                  className="mt-3 w-full border border-stone-200 text-center py-1 rounded-lg text-sm hover:bg-stone-50"
                 >
                   Ver perfil
                 </Link>
@@ -262,15 +265,18 @@ function ValidateObservation() {
         </div>
 
         {/* Coluna direita — ocupa 1/3 */}
-        {/* Coluna direita — ocupa 1/3 */}
         <div className="space-y-6">
           {/* Classificação taxonómica */}
           <section className="bg-white rounded-lg border border-stone-200 p-6">
             <h3 className="font-medium mb-4">Classificação taxonómica</h3>
             <SpeciesSearch
+              key={speciesKey}
               onSelect={(species) => setSelectedSpecies(species?.id ?? null)}
               disabled={observation.status !== "PENDING"}
             />
+            {observation.status === "PENDING" && !selectedSpecies && (
+              <CreateSpeciesModal onCreated={handleSpeciesCreated} />
+            )}
           </section>
 
           {/* Notas do técnico */}
@@ -286,7 +292,7 @@ function ValidateObservation() {
             />
           </section>
 
-          {/* Input de rejeição (aparece ao clicar rejeitar) */}
+          {/* Input de rejeição */}
           {showRejectInput && (
             <section className="bg-white rounded-lg border border-red-200 p-6">
               <h3 className="font-medium mb-4 text-red-600">
