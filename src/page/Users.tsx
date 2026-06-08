@@ -42,6 +42,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import CreateUserModal from "@/components/CreateUserModal";
 
 interface UserRow {
   id: string;
@@ -215,8 +216,9 @@ export default function Users() {
 
   return (
     <>
-      <header>
+      <header className="flex items-center justify-between">
         <h2 className="font-medium text-xl">Utilizadores</h2>
+        <CreateUserModal onCreated={fetchUsers} />
       </header>
 
       {/* Filtros */}
