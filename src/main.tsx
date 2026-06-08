@@ -15,7 +15,6 @@ import Dashboard from "./page/Dashboard";
 import Observations from "./page/Observations";
 import Species from "./page/Species";
 import Users from "./page/Users";
-import MapPage from "./page/MapPage";
 import Statistics from "./page/Statistics";
 import Login from "./page/Login";
 import ProtectedLayout from "./layout/ProtectedLayout";
@@ -24,6 +23,7 @@ import DetailUser from "./page/DetailUser";
 import CreateSpecies from "./page/CreateSpecie";
 import EditSpecies from "./page/EditSpecies";
 import { Toaster } from "./components/ui/sonner";
+import Map from "./page/Map";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -39,7 +39,7 @@ const router = createBrowserRouter(
         <Route path="/species-create" element={<CreateSpecies />} />
         <Route path="/users" element={<Users />} />
         <Route path="/users/:id" element={<DetailUser />} />
-        <Route path="/map" element={<MapPage />} />
+        <Route path="/map" element={<Map />} />
         <Route path="/statistics" element={<Statistics />} />
       </Route>
     </>,
