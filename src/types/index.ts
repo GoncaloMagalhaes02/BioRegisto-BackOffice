@@ -52,3 +52,45 @@ export interface Observation {
 export interface ObservationWithPhoto extends Observation {
   photo_url: string | null;
 }
+
+
+
+export interface Profile {
+  id: string;
+  username: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  location: string | null;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+  email: string;
+  total_observations: number;
+  validated_observations: number;
+  pending_observations: number;
+  rejected_observations: number;
+}
+
+export interface UserObs {
+  id: string;
+  description: string;
+  observed_at: string;
+  status: string;
+  scientific_name: string | null;
+  common_name_pt: string | null;
+  suggested_species: string | null;
+  photo_url: string | null;
+}
+
+export interface AuditEntry {
+  id: string;
+  action: string;
+  previous_status: string | null;
+  new_status: string | null;
+  rejection_reason: string | null;
+  notes: string | null;
+  created_at: string;
+  technician_username: string | null;
+  technician_full_name: string | null;
+}
