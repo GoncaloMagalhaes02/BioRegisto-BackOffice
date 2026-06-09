@@ -94,3 +94,14 @@ export interface AuditEntry {
   technician_username: string | null;
   technician_full_name: string | null;
 }
+
+export interface Stats {
+  total: number;
+  validated: number;
+  pending: number;
+  rejected: number;
+  total_trend: number;
+  validated_trend: number;
+  pending_trend: number;
+  rejected_trend: number;
+}
