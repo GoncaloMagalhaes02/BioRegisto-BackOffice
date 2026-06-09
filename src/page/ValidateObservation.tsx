@@ -10,6 +10,8 @@ import CreateSpeciesModal from "@/components/CreateSpeciesModal";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
+import AuditTimeline from "@/components/AuditTimeline";
+
 function ValidateObservation() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -423,6 +425,10 @@ function ValidateObservation() {
             >
               Rejeitar observação
             </button>
+          </section>
+          <section className="bg-white rounded-lg border border-stone-200 p-6">
+            <h3 className="font-medium mb-4">Histórico</h3>
+            <AuditTimeline observationId={observation.id} />
           </section>
         </div>
       </div>
