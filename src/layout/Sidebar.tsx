@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { useObservationStats } from "@/hooks/useObservationsStats";
 
+import logo from "../assets/logo.png";
+
 // Itens de navegação
 const navItems = [
   { label: "Dashboard", path: "/", icon: LayoutDashboard },
@@ -48,14 +50,19 @@ export default function Sidebar() {
   return (
     <aside className="w-56 bg-white border-r border-stone-200 flex flex-col h-screen sticky top-0">
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-stone-200">
-        <div className="flex items-center gap-2">
-          <Leaf className="w-5 h-5 text-[#2D5A3D]" />
-          <span className="font-serif text-base text-[#2D5A3D] font-medium">
-            BioRegisto
-          </span>
+      <div className="px-6 py-5 border-b border-stone-200">
+        <div className="flex items-center gap-4">
+          <img
+            src={logo}
+            className="w-10 h-10 scale-[0.85] object-contain flex-shrink-0"
+          />
+          <div className="min-w-0">
+            <p className="font-serif text-base text-[#2D5A3D] font-semibold leading-tight truncate">
+              BioRegisto
+            </p>
+            <p className="text-[10px] text-stone-400">Backoffice</p>
+          </div>
         </div>
-        <p className="text-[11px] text-stone-400 mt-1 ml-7">Backoffice</p>
       </div>
 
       {/* Navegação */}
