@@ -47,9 +47,7 @@ function ValidateObservation() {
       // Se a observação tem species_id, buscar dados completos da espécie
       if (data.species_id) {
         const { data: sp } = await supabase
-          .from("species")
-          .select("*")
-          .eq("id", data.species_id)
+          .rpc("get_species_full", { p_species_id: data.species_id })
           .single();
         setSpeciesInfo(sp);
       }
@@ -97,9 +95,7 @@ function ValidateObservation() {
 
       // Buscar dados da espécie recém-selecionada para mostrar a info
       const { data: sp } = await supabase
-        .from("species")
-        .select("*")
-        .eq("id", selectedSpecies)
+        .rpc("get_species_full", { p_species_id: selectedSpecies })
         .single();
       setSpeciesInfo(sp);
     } catch (error) {
@@ -316,11 +312,11 @@ function ValidateObservation() {
                 <div className="border-t border-stone-100 pt-3 space-y-2">
                   {[
                     ["Reino", speciesInfo.kingdom],
-                    ["Filo", speciesInfo.phylum],
-                    ["Classe", speciesInfo.class],
-                    ["Ordem", speciesInfo.order],
-                    ["Família", speciesInfo.family],
-                    ["Género", speciesInfo.genus],
+                    ["Filo", speciesInfo.phylum_name],
+                    ["Classe", speciesInfo.class_name],
+                    ["Ordem", speciesInfo.order_name],
+                    ["Família", speciesInfo.family_name],
+                    ["Género", speciesInfo.genus_name],
                   ].map(([label, value]) => (
                     <div key={label} className="flex justify-between text-sm">
                       <span className="text-stone-500">{label}</span>
