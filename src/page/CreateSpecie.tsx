@@ -11,23 +11,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
+import TaxonomyCascade from "@/components/TaxonomyCascade";
 import { toast } from "sonner";
 
 export default function CreateSpecies() {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
+  const [genusId, setGenusId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     scientific_name: "",
     common_name_pt: "",
     common_name_en: "",
     kingdom: "",
-    phylum: "",
-    class: "",
-    order: "",
-    family: "",
-    genus: "",
     description: "",
     is_protected: false,
   });
@@ -42,6 +38,11 @@ export default function CreateSpecies() {
       return;
     }
 
+    if (!genusId) {
+      toast.error("Seleciona a classificação taxonómica até ao género.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const { error } = await supabase.from("species").insert({
@@ -49,11 +50,7 @@ export default function CreateSpecies() {
         common_name_pt: form.common_name_pt.trim() || null,
         common_name_en: form.common_name_en.trim() || null,
         kingdom: form.kingdom,
-        phylum: form.phylum.trim() || null,
-        class: form.class.trim() || null,
-        order: form.order.trim() || null,
-        family: form.family.trim() || null,
-        genus: form.genus.trim() || null,
+        genus_id: genusId,
         description: form.description.trim() || null,
         is_protected: form.is_protected,
       });
@@ -131,7 +128,13 @@ export default function CreateSpecies() {
 
           <div>
             <label className="text-xs text-stone-500 uppercase">Reino *</label>
-            <Select onValueChange={(v) => handleChange("kingdom", v)}>
+            <Select
+              value={form.kingdom}
+              onValueChange={(v) => {
+                handleChange("kingdom", v);
+                setGenusId(null);
+              }}
+            >
               <SelectTrigger className="mt-1 w-full bg-white">
                 <SelectValue placeholder="Selecionar reino" />
               </SelectTrigger>
@@ -172,59 +175,20 @@ export default function CreateSpecies() {
           </div>
         </section>
 
-        {/* Coluna direita — Taxonomia */}
+        {/* Coluna direita — Taxonomia em cascata */}
         <section className="bg-white rounded-lg border border-stone-200 p-6 space-y-5">
           <h3 className="font-medium">Classificação Taxonómica</h3>
 
-          <div>
-            <label className="text-xs text-stone-500 uppercase">Filo</label>
-            <Input
-              className="mt-1 bg-white"
-              placeholder="ex: Chordata"
-              value={form.phylum}
-              onChange={(e) => handleChange("phylum", e.target.value)}
-            />
-          </div>
+          {!form.kingdom && (
+            <p className="text-sm text-stone-400">
+              Seleciona primeiro o reino para escolher a taxonomia.
+            </p>
+          )}
 
-          <div>
-            <label className="text-xs text-stone-500 uppercase">Classe</label>
-            <Input
-              className="mt-1 bg-white"
-              placeholder="ex: Mammalia"
-              value={form.class}
-              onChange={(e) => handleChange("class", e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="text-xs text-stone-500 uppercase">Ordem</label>
-            <Input
-              className="mt-1 bg-white"
-              placeholder="ex: Carnivora"
-              value={form.order}
-              onChange={(e) => handleChange("order", e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="text-xs text-stone-500 uppercase">Família</label>
-            <Input
-              className="mt-1 bg-white"
-              placeholder="ex: Fagaceae"
-              value={form.family}
-              onChange={(e) => handleChange("family", e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="text-xs text-stone-500 uppercase">Género</label>
-            <Input
-              className="mt-1 bg-white"
-              placeholder="ex: Quercus"
-              value={form.genus}
-              onChange={(e) => handleChange("genus", e.target.value)}
-            />
-          </div>
+          <TaxonomyCascade
+            kingdom={form.kingdom}
+            onGenusSelected={setGenusId}
+          />
         </section>
       </div>
 
