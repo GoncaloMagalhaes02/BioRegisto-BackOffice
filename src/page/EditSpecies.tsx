@@ -12,26 +12,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import TaxonomyCascadeEdit from "@/components/TaxonomyCascadeEdit";
 
 export default function EditSpecies() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [genusId, setGenusId] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     scientific_name: "",
     common_name_pt: "",
     common_name_en: "",
     kingdom: "",
-    phylum: "",
-    class: "",
-    order: "",
-    family: "",
-    genus: "",
     description: "",
     is_protected: false,
   });
+
+  const [initialTax, setInitialTax] = useState<any>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -39,9 +38,7 @@ export default function EditSpecies() {
     const fetchSpecies = async () => {
       try {
         const { data, error } = await supabase
-          .from("species")
-          .select("*")
-          .eq("id", id)
+          .rpc("get_species_full", { p_species_id: id })
           .single();
 
         if (error) throw error;
@@ -51,14 +48,19 @@ export default function EditSpecies() {
           common_name_pt: data.common_name_pt || "",
           common_name_en: data.common_name_en || "",
           kingdom: data.kingdom || "",
-          phylum: data.phylum || "",
-          class: data.class || "",
-          order: data.order || "",
-          family: data.family || "",
-          genus: data.genus || "",
           description: data.description || "",
           is_protected: data.is_protected || false,
         });
+
+        // Guardar a taxonomia inicial para a cascata
+        setInitialTax({
+          phylum_id: data.phylum_id,
+          class_id: data.class_id,
+          order_id: data.order_id,
+          family_id: data.family_id,
+          genus_id: data.genus_id,
+        });
+        setGenusId(data.genus_id);
       } catch (error) {
         console.log("Erro:", error);
         toast.error("Espécie não encontrada.");
@@ -80,6 +82,11 @@ export default function EditSpecies() {
       return;
     }
 
+    if (!genusId) {
+      toast.error("Seleciona a classificação taxonómica até ao género.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const { error } = await supabase
@@ -89,11 +96,7 @@ export default function EditSpecies() {
           common_name_pt: form.common_name_pt.trim() || null,
           common_name_en: form.common_name_en.trim() || null,
           kingdom: form.kingdom,
-          phylum: form.phylum.trim() || null,
-          class: form.class.trim() || null,
-          order: form.order.trim() || null,
-          family: form.family.trim() || null,
-          genus: form.genus.trim() || null,
+          genus_id: genusId,
           description: form.description.trim() || null,
           is_protected: form.is_protected,
         })
@@ -174,11 +177,8 @@ export default function EditSpecies() {
 
           <div>
             <label className="text-xs text-stone-500 uppercase">Reino *</label>
-            <Select
-              value={form.kingdom}
-              onValueChange={(v) => handleChange("kingdom", v)}
-            >
-              <SelectTrigger className="mt-1 w-full bg-white">
+            <Select value={form.kingdom} disabled>
+              <SelectTrigger className="mt-1 w-full bg-stone-50">
                 <SelectValue placeholder="Selecionar reino" />
               </SelectTrigger>
               <SelectContent>
@@ -189,6 +189,9 @@ export default function EditSpecies() {
                 </SelectGroup>
               </SelectContent>
             </Select>
+            <p className="text-xs text-stone-400 mt-1">
+              O reino não pode ser alterado (afeta a taxonomia).
+            </p>
           </div>
 
           <div>
@@ -218,55 +221,16 @@ export default function EditSpecies() {
           </div>
         </section>
 
-        {/* Coluna direita — Taxonomia */}
+        {/* Coluna direita — Taxonomia em cascata */}
         <section className="bg-white rounded-lg border border-stone-200 p-6 space-y-5">
           <h3 className="font-medium">Classificação Taxonómica</h3>
-
-          <div>
-            <label className="text-xs text-stone-500 uppercase">Filo</label>
-            <Input
-              className="mt-1 bg-white"
-              placeholder="ex: Chordata"
-              value={form.phylum}
-              onChange={(e) => handleChange("phylum", e.target.value)}
+          {initialTax && (
+            <TaxonomyCascadeEdit
+              kingdom={form.kingdom}
+              initial={initialTax}
+              onGenusSelected={setGenusId}
             />
-          </div>
-          <div>
-            <label className="text-xs text-stone-500 uppercase">Classe</label>
-            <Input
-              className="mt-1 bg-white"
-              placeholder="ex: Mammalia"
-              value={form.class}
-              onChange={(e) => handleChange("class", e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="text-xs text-stone-500 uppercase">Ordem</label>
-            <Input
-              className="mt-1 bg-white"
-              placeholder="ex: Carnivora"
-              value={form.order}
-              onChange={(e) => handleChange("order", e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="text-xs text-stone-500 uppercase">Família</label>
-            <Input
-              className="mt-1 bg-white"
-              placeholder="ex: Fagaceae"
-              value={form.family}
-              onChange={(e) => handleChange("family", e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="text-xs text-stone-500 uppercase">Género</label>
-            <Input
-              className="mt-1 bg-white"
-              placeholder="ex: Quercus"
-              value={form.genus}
-              onChange={(e) => handleChange("genus", e.target.value)}
-            />
-          </div>
+          )}
         </section>
       </div>
 
