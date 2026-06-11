@@ -39,16 +39,7 @@ import {
 } from "@/components/ui/dialog";
 import { Link } from "react-router-dom";
 
-interface Species {
-  id: string;
-  scientific_name: string;
-  common_name_pt: string | null;
-  common_name_en: string | null;
-  kingdom: string;
-  family: string | null;
-  is_protected: boolean;
-  observation_count: number;
-}
+import { type Species } from "@/types";
 
 function KingdomBadge({ kingdom }: { kingdom: string }) {
   const styles: Record<string, string> = {
@@ -207,6 +198,7 @@ export default function Species() {
               <TableHead>Nome Científico</TableHead>
               <TableHead>Nome Comum (PT)</TableHead>
               <TableHead>Reino</TableHead>
+              <TableHead>Género</TableHead>
               <TableHead>Família</TableHead>
               <TableHead>Protegida</TableHead>
               <TableHead>Observações</TableHead>
@@ -225,7 +217,10 @@ export default function Species() {
                     <TableCell>
                       <KingdomBadge kingdom={sp.kingdom} />
                     </TableCell>
-                    <TableCell>{sp.family ?? "—"}</TableCell>
+                    <TableCell className="italic">
+                      {sp.genus_name ?? "—"}
+                    </TableCell>
+                    <TableCell>{sp.family_name ?? "—"}</TableCell>
                     <TableCell>
                       {sp.is_protected ? (
                         <ShieldCheck size={18} className="text-green-600" />

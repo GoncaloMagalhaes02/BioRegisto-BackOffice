@@ -105,3 +105,17 @@ export interface Stats {
   pending_trend: number;
   rejected_trend: number;
 }
+
+
+
+export interface Species {
+  id: string;
+  scientific_name: string;
+  common_name_pt: string | null;
+  common_name_en: string | null;
+  kingdom: string;
+  genus_name: string | null;
+  family_name: string | null;
+  is_protected: boolean;
+  observation_count: number;
+}
