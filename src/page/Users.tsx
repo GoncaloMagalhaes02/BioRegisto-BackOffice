@@ -84,7 +84,7 @@ export default function Users() {
   const [searchInput, setSearchInput] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const itemsPerPage = 6;
 
   // Dialogs
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
