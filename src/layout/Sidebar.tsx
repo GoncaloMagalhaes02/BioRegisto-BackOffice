@@ -10,7 +10,7 @@ import {
   LogOut,
   Bird,
 } from "lucide-react";
-import { useObservationStats } from "@/hooks/useObservationsStats";
+import { useStats } from "@/hooks/useObservationsStats";
 
 import logo from "../assets/logo.png";
 
@@ -28,7 +28,7 @@ export default function Sidebar() {
   const location = useLocation();
   const { profile, signOut } = useAuth();
 
-  const { pendentes } = useObservationStats();
+  const { pendentes } = useStats();
 
   // Verificar se o item está ativo
   function isActive(path: string) {

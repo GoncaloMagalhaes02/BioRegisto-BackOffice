@@ -10,7 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Eye, Search } from "lucide-react";
 
-import { useObservationStats } from "@/hooks/useObservationsStats";
+import { useStats } from "@/hooks/useObservationsStats";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,7 +44,7 @@ interface ObservationWithPhoto extends Observation {
 
 export default function Observations() {
   const { loading: authLoading, user } = useAuth();
-  const { reinos } = useObservationStats();
+  const { reinos } = useStats();
 
   const [estado, setEstado] = useState("ALL");
   const [reino, setReino] = useState("ALL");

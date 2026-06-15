@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import Avatar from "@/components/Avatar";
 
 import AuditTimeline from "@/components/AuditTimeline";
-
+import { useStats } from "@/hooks/useObservationsStats";
 function ValidateObservation() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -28,7 +28,7 @@ function ValidateObservation() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [showRejectInput, setShowRejectInput] = useState(false);
-
+  const { refetch: refreshStats } = useStats();
   const [refreshKey, setRefreshKey] = useState(0);
 
   const getObservationById = async (id: string | undefined) => {
@@ -94,6 +94,7 @@ function ValidateObservation() {
       await getObservationById(id);
       // Forçar refresh do histórico de auditoria
       setRefreshKey((prev) => prev + 1);
+      await refreshStats();
       // Limpar inputs
       setNotes("");
     } catch (error) {
@@ -125,6 +126,7 @@ function ValidateObservation() {
       });
 
       await getObservationById(id);
+      await refreshStats();
       setRefreshKey((prev) => prev + 1);
       setShowRejectInput(false);
       setRejectionReason("");

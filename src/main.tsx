@@ -24,6 +24,7 @@ import CreateSpecies from "./page/CreateSpecie";
 import EditSpecies from "./page/EditSpecies";
 import { Toaster } from "./components/ui/sonner";
 import Map from "./page/Map";
+import { StatsProvider } from "./hooks/useObservationsStats";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -49,8 +50,10 @@ const router = createBrowserRouter(
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AuthProvider>
-      <RouterProvider router={router} />
-      <Toaster position="top-right" richColors />
+      <StatsProvider>
+        <RouterProvider router={router} />
+        <Toaster position="top-right" richColors />
+      </StatsProvider>
     </AuthProvider>
   </StrictMode>,
 );
