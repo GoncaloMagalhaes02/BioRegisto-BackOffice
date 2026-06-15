@@ -37,8 +37,10 @@ const actionConfig: Record<
 
 export default function AuditTimeline({
   observationId,
+  refreshKey,
 }: {
   observationId: string;
+  refreshKey?: number;
 }) {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +61,7 @@ export default function AuditTimeline({
     };
 
     fetchAudit();
-  }, [observationId]);
+  }, [observationId, refreshKey]);
 
   function formatDateTime(date: string) {
     return new Intl.DateTimeFormat("pt-PT", {

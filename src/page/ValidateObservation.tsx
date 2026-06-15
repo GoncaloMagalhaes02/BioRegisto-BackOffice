@@ -29,6 +29,8 @@ function ValidateObservation() {
   const [submitting, setSubmitting] = useState(false);
   const [showRejectInput, setShowRejectInput] = useState(false);
 
+  const [refreshKey, setRefreshKey] = useState(0);
+
   const getObservationById = async (id: string | undefined) => {
     if (!id) return;
     try {
@@ -88,17 +90,12 @@ function ValidateObservation() {
         description: "O utilizador será notificado.",
       });
 
-      setObservation((prev) =>
-        prev
-          ? { ...prev, status: "VALIDATED", species_id: selectedSpecies }
-          : prev,
-      );
-
-      // Buscar dados da espécie recém-selecionada para mostrar a info
-      const { data: sp } = await supabase
-        .rpc("get_species_full", { p_species_id: selectedSpecies })
-        .single();
-      setSpeciesInfo(sp);
+      // Re-buscar a observação completa (status, espécie, etc.)
+      await getObservationById(id);
+      // Forçar refresh do histórico de auditoria
+      setRefreshKey((prev) => prev + 1);
+      // Limpar inputs
+      setNotes("");
     } catch (error) {
       console.log("Erro ao validar:", error);
       toast.error("Erro ao validar observação.");
@@ -127,8 +124,11 @@ function ValidateObservation() {
         description: "O utilizador foi notificado com o motivo.",
       });
 
-      setObservation((prev) => (prev ? { ...prev, status: "REJECTED" } : prev));
+      await getObservationById(id);
+      setRefreshKey((prev) => prev + 1);
       setShowRejectInput(false);
+      setRejectionReason("");
+      setNotes("");
     } catch (error) {
       console.log("Erro ao rejeitar:", error);
       toast.error("Erro ao rejeitar observação.");
@@ -140,6 +140,36 @@ function ValidateObservation() {
   const handleSpeciesCreated = (species: any) => {
     setSelectedSpecies(species.id);
     setSpeciesKey((prev) => prev + 1);
+  };
+
+  const handleReopen = async () => {
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.rpc("reopen_observation", {
+        p_observation_id: id,
+        p_technician_id: user?.id,
+      });
+
+      if (error) throw error;
+      toast.success("Observação reaberta.", {
+        description: "Pode agora ser validada ou rejeitada novamente.",
+      });
+
+      // Repor estado local para PENDING
+      setObservation((prev) =>
+        prev ? { ...prev, status: "PENDING", species_id: null } : prev,
+      );
+      await getObservationById(id);
+      setRefreshKey((prev) => prev + 1);
+      setSpeciesInfo(null);
+      setSelectedSpecies(null);
+      setSpeciesKey((prev) => prev + 1);
+    } catch (error) {
+      console.log("Erro ao reabrir:", error);
+      toast.error("Erro ao reabrir observação.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   useEffect(() => {
@@ -394,44 +424,59 @@ function ValidateObservation() {
           )}
 
           {/* Botões de ação */}
+          {/* Botões de ação */}
           <section className="bg-white rounded-lg border border-stone-200 p-6 space-y-3">
             <p className="text-xs text-stone-400">
               {observation.status === "PENDING"
                 ? "Ao validar, a espécie é obrigatória. Ao rejeitar, será pedido um motivo."
                 : `Esta observação já foi ${observation.status === "VALIDATED" ? "validada" : "rejeitada"}.`}
             </p>
-            <button
-              onClick={handleValidate}
-              disabled={observation.status !== "PENDING" || submitting}
-              className={`w-full py-3 rounded-lg font-medium ${
-                observation.status === "PENDING" && !submitting
-                  ? "bg-[#2D5A3D] text-white cursor-pointer hover:bg-[#1f4a2d]"
-                  : "bg-stone-200 text-stone-400 cursor-not-allowed"
-              }`}
-            >
-              {submitting ? "A processar..." : "Validar observação"}
-            </button>
-            <button
-              onClick={() => setShowRejectInput(true)}
-              disabled={
-                observation.status !== "PENDING" ||
-                submitting ||
-                showRejectInput
-              }
-              className={`w-full py-3 rounded-lg font-medium ${
-                observation.status === "PENDING" &&
-                !submitting &&
-                !showRejectInput
-                  ? "border border-red-200 text-red-600 cursor-pointer hover:bg-red-50"
-                  : "bg-stone-200 text-stone-400 cursor-not-allowed"
-              }`}
-            >
-              Rejeitar observação
-            </button>
+
+            {observation.status === "PENDING" ? (
+              <>
+                <button
+                  onClick={handleValidate}
+                  disabled={submitting}
+                  className={`w-full py-3 rounded-lg font-medium ${
+                    !submitting
+                      ? "bg-[#2D5A3D] text-white cursor-pointer hover:bg-[#1f4a2d]"
+                      : "bg-stone-200 text-stone-400 cursor-not-allowed"
+                  }`}
+                >
+                  {submitting ? "A processar..." : "Validar observação"}
+                </button>
+                <button
+                  onClick={() => setShowRejectInput(true)}
+                  disabled={submitting || showRejectInput}
+                  className={`w-full py-3 rounded-lg font-medium ${
+                    !submitting && !showRejectInput
+                      ? "border border-red-200 text-red-600 cursor-pointer hover:bg-red-50"
+                      : "bg-stone-200 text-stone-400 cursor-not-allowed"
+                  }`}
+                >
+                  Rejeitar observação
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleReopen}
+                disabled={submitting}
+                className={`w-full py-3 rounded-lg font-medium flex items-center justify-center gap-2 ${
+                  !submitting
+                    ? "border border-stone-300 text-stone-700 cursor-pointer hover:bg-stone-50"
+                    : "bg-stone-200 text-stone-400 cursor-not-allowed"
+                }`}
+              >
+                {submitting ? "A processar..." : "Reabrir observação"}
+              </button>
+            )}
           </section>
           <section className="bg-white rounded-lg border border-stone-200 p-6">
             <h3 className="font-medium mb-4">Histórico</h3>
-            <AuditTimeline observationId={observation.id} />
+            <AuditTimeline
+              observationId={observation.id}
+              refreshKey={refreshKey}
+            />
           </section>
         </div>
       </div>

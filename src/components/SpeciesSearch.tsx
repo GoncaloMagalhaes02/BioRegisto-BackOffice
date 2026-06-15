@@ -8,12 +8,12 @@ interface Species {
   scientific_name: string;
   common_name_pt: string | null;
   kingdom: string;
-  family: string | null;
+  family_name: string | null;
   is_protected: boolean;
 }
 
 interface SpeciesSearchProps {
-  onSelect: (species: Species) => void;
+  onSelect: (species: Species | null) => void;
   disabled?: boolean;
 }
 
@@ -38,7 +38,6 @@ export default function SpeciesSearch({
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  // Fechar dropdown ao clicar fora
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -49,7 +48,6 @@ export default function SpeciesSearch({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // Pesquisar espécies com debounce
   useEffect(() => {
     if (query.trim().length < 2) {
       setResults([]);
@@ -60,14 +58,28 @@ export default function SpeciesSearch({
       const { data, error } = await supabase
         .from("species")
         .select(
-          "id, scientific_name, common_name_pt, kingdom, family, is_protected",
+          "id, scientific_name, common_name_pt, kingdom, is_protected, genera(name, families(name))",
         )
         .or(`scientific_name.ilike.%${query}%,common_name_pt.ilike.%${query}%`)
         .order("scientific_name")
         .limit(8);
 
-      if (!error && data) {
-        setResults(data);
+      if (error) {
+        console.log("Erro na pesquisa:", error);
+        return;
+      }
+
+      if (data) {
+        // Achatar o family_name do join aninhado
+        const mapped = data.map((sp: any) => ({
+          id: sp.id,
+          scientific_name: sp.scientific_name,
+          common_name_pt: sp.common_name_pt,
+          kingdom: sp.kingdom,
+          is_protected: sp.is_protected,
+          family_name: sp.genera?.families?.name ?? null,
+        }));
+        setResults(mapped);
         setOpen(true);
       }
     }, 300);
@@ -85,7 +97,7 @@ export default function SpeciesSearch({
   const handleClear = () => {
     setSelected(null);
     setQuery("");
-    onSelect(null as any);
+    onSelect(null);
   };
 
   if (selected) {
@@ -103,7 +115,7 @@ export default function SpeciesSearch({
               )}
             </div>
             <p className="text-xs text-stone-500 mt-1">
-              {selected.common_name_pt} · {selected.family}
+              {selected.common_name_pt} · {selected.family_name ?? "—"}
             </p>
           </div>
           {!disabled && (
@@ -149,7 +161,7 @@ export default function SpeciesSearch({
                 )}
               </div>
               <p className="text-xs text-stone-400 mt-0.5 ml-4">
-                {sp.common_name_pt ?? "—"} · {sp.family ?? "—"}
+                {sp.common_name_pt ?? "—"} · {sp.family_name ?? "—"}
               </p>
             </button>
           ))}
