@@ -26,6 +26,7 @@ import {
   BarChart,
   Bar,
 } from "recharts";
+import Avatar from "@/components/Avatar";
 
 interface GlobalStats {
   total: number;
@@ -262,17 +263,7 @@ export default function Statistics() {
                   <span className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center text-xs font-medium text-stone-500">
                     {i + 1}
                   </span>
-                  {obs.avatar_url ? (
-                    <img
-                      src={obs.avatar_url}
-                      alt=""
-                      className="w-9 h-9 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-9 h-9 rounded-full bg-stone-200 flex items-center justify-center text-xs font-medium text-stone-500">
-                      {obs.full_name?.[0] || obs.username?.[0] || "?"}
-                    </div>
-                  )}
+                  <Avatar name={obs.username} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">
                       {obs.full_name}

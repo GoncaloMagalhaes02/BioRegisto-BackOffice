@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { MoveLeft, MapPin, Calendar, Mail } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
 import { type Profile, type UserObs } from "@/types";
+import Avatar from "@/components/Avatar";
 
 function RoleBadge({ role }: { role: string }) {
   const styles: Record<string, string> = {
@@ -90,17 +91,12 @@ export default function DetailUser() {
         {/* Coluna esquerda — perfil */}
         <div className="space-y-6">
           <section className="bg-white rounded-lg border border-stone-200 p-6 flex flex-col items-center">
-            {profile.avatar_url ? (
-              <img
-                src={profile.avatar_url}
-                alt=""
-                className="w-24 h-24 rounded-full object-cover"
-              />
-            ) : (
-              <div className="w-24 h-24 rounded-full bg-stone-200 flex items-center justify-center text-3xl font-medium text-stone-500">
-                {profile.full_name?.[0] || profile.username?.[0] || "?"}
-              </div>
-            )}
+            <Avatar
+              name={profile.full_name}
+              username={profile.username}
+              avatarUrl={profile.avatar_url}
+              size={100}
+            />
             <h3 className="font-semibold text-lg mt-4">{profile.full_name}</h3>
             <p className="text-green-700 text-sm">@{profile.username}</p>
             <div className="mt-3">

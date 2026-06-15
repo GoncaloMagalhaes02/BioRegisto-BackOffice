@@ -9,6 +9,7 @@ import SpeciesSearch from "@/components/SpeciesSearch";
 import CreateSpeciesModal from "@/components/CreateSpeciesModal";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import Avatar from "@/components/Avatar";
 
 import AuditTimeline from "@/components/AuditTimeline";
 
@@ -257,7 +258,13 @@ function ValidateObservation() {
             <section className="bg-white rounded-lg border border-stone-200 p-6">
               <h3 className="font-medium mb-4">Observador</h3>
               <div className="border border-stone-100 p-3 flex flex-col items-center">
-                <p>{observation.full_name}</p>
+                <Avatar
+                  name={observation.full_name}
+                  username={observation.username}
+                  avatarUrl={observation.avatar_url}
+                  size={50}
+                />
+                <p className="mt-2">{observation.full_name}</p>
                 <p className="text-green-700">@{observation.username}</p>
                 <div className="flex gap-2 border border-stone-200 py-2 px-5 rounded-3xl mt-3">
                   <p className="text-xs text-stone-500 font-semibold">

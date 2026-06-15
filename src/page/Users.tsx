@@ -43,6 +43,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import CreateUserModal from "@/components/CreateUserModal";
+import Avatar from "@/components/Avatar";
 
 interface UserRow {
   id: string;
@@ -272,17 +273,12 @@ export default function Users() {
                 {paginatedUsers.map((u) => (
                   <TableRow key={u.id} className="h-[60px]">
                     <TableCell>
-                      {u.avatar_url ? (
-                        <img
-                          src={u.avatar_url}
-                          alt=""
-                          className="w-9 h-9 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-9 h-9 rounded-full bg-stone-200 flex items-center justify-center text-xs font-medium text-stone-500">
-                          {u.full_name?.[0] || u.username?.[0] || "?"}
-                        </div>
-                      )}
+                      <Avatar
+                        name={u.full_name}
+                        username={u.username}
+                        avatarUrl={u.avatar_url}
+                        size={36}
+                      />
                     </TableCell>
                     <TableCell className="font-medium">
                       {u.full_name ?? "—"}

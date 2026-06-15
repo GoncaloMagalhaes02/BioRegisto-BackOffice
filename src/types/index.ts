@@ -30,6 +30,7 @@ export interface Observation {
   observed_at: string;
   status: ObservationStatus;
   is_public: boolean;
+  avatar_url: string | null;
   rejection_reason: string | null;
   technician_notes: string | null;
   validated_at: string | null;
