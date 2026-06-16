@@ -27,7 +27,7 @@ import { Link } from "react-router-dom";
 import { TableSkeleton } from "@/components/states/LoadingState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { EmptyState } from "@/components/states/EmptyState";
-import { BrushCleaning } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, BrushCleaning } from "lucide-react";
 
 function Dashboard() {
   const { profile, user, loading: authLoading } = useAuth();
@@ -37,11 +37,20 @@ function Dashboard() {
 
   const [observations, setObservations] = useState<ObservationWithPhoto[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+
+  const [dateSort, setDateSort] = useState<"none" | "asc" | "desc">("none");
   const itemsPerPage = 5;
+
+  const sortedObservations = [...observations].sort((a, b) => {
+    if (dateSort === "none") return 0;
+    const dateA = new Date(a.created_at).getTime();
+    const dateB = new Date(b.created_at).getTime();
+    return dateSort === "asc" ? dateA - dateB : dateB - dateA;
+  });
 
   // Paginação
   const totalPages = Math.ceil(observations.length / itemsPerPage);
-  const paginatedObservations = observations.slice(
+  const paginatedObservations = sortedObservations.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
@@ -105,6 +114,14 @@ function Dashboard() {
   }
 
   const data = new Date();
+
+  const toggleDateSort = () => {
+    setDateSort((prev) => {
+      if (prev === "none") return "desc";
+      if (prev === "desc") return "asc";
+      return "none";
+    });
+  };
   return (
     <>
       <header>
@@ -145,7 +162,23 @@ function Dashboard() {
                   <TableHead>Foto</TableHead>
                   <TableHead>Utilizador</TableHead>
                   <TableHead>Descrição</TableHead>
-                  <TableHead>Data</TableHead>
+                  <TableHead className="flex">
+                    <button
+                      onClick={toggleDateSort}
+                      className="flex items-center gap-1.5 cursor-pointer hover:text-stone-900 transition-colors"
+                    >
+                      Data
+                      {dateSort === "none" && (
+                        <ArrowUpDown size={14} className="text-stone-400" />
+                      )}
+                      {dateSort === "desc" && (
+                        <ArrowDown size={14} className="text-[#2D5A3D]" />
+                      )}
+                      {dateSort === "asc" && (
+                        <ArrowUp size={14} className="text-[#2D5A3D]" />
+                      )}
+                    </button>
+                  </TableHead>
                   <TableHead>Localização</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>

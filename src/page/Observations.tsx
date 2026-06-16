@@ -34,6 +34,8 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+
 import { type Observation } from "@/types";
 import StatusBadge from "@/components/StatusBadge";
 import { Link } from "react-router-dom";
@@ -49,6 +51,8 @@ export default function Observations() {
   const { loading: authLoading, user } = useAuth();
   const { reinos } = useStats();
 
+  const [dateSort, setDateSort] = useState<"none" | "asc" | "desc">("none");
+
   const [estado, setEstado] = useState("ALL");
   const [reino, setReino] = useState("ALL");
   const [timeRange, setTimeRange] = useState("ALL");
@@ -61,8 +65,15 @@ export default function Observations() {
 
   const itemsPerPage = 6;
 
+  const sortedObservations = [...observations].sort((a, b) => {
+    if (dateSort === "none") return 0;
+    const dateA = new Date(a.created_at).getTime();
+    const dateB = new Date(b.created_at).getTime();
+    return dateSort === "asc" ? dateA - dateB : dateB - dateA;
+  });
+
   const totalPages = Math.ceil(observations.length / itemsPerPage);
-  const paginatedObservations = observations.slice(
+  const paginatedObservations = sortedObservations.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
@@ -156,6 +167,14 @@ export default function Observations() {
     date.setHours(0, 0, 0, 0);
     return date.toISOString();
   }
+
+  const toggleDateSort = () => {
+    setDateSort((prev) => {
+      if (prev === "none") return "desc";
+      if (prev === "desc") return "asc";
+      return "none";
+    });
+  };
 
   return (
     <>
@@ -255,7 +274,23 @@ export default function Observations() {
                 <TableHead>Espécie Sugerida</TableHead>
                 <TableHead>Utilizador</TableHead>
                 <TableHead>Localização</TableHead>
-                <TableHead>Data</TableHead>
+                <TableHead className="flex">
+                  <button
+                    onClick={toggleDateSort}
+                    className="flex items-center gap-1.5 cursor-pointer hover:text-stone-900 transition-colors"
+                  >
+                    Data
+                    {dateSort === "none" && (
+                      <ArrowUpDown size={14} className="text-stone-400" />
+                    )}
+                    {dateSort === "desc" && (
+                      <ArrowDown size={14} className="text-[#2D5A3D]" />
+                    )}
+                    {dateSort === "asc" && (
+                      <ArrowUp size={14} className="text-[#2D5A3D]" />
+                    )}
+                  </button>
+                </TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
