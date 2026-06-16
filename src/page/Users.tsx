@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   UserX,
   UserCheck,
+  BrushCleaning,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -44,6 +45,9 @@ import {
 } from "@/components/ui/dialog";
 import CreateUserModal from "@/components/CreateUserModal";
 import Avatar from "@/components/Avatar";
+import { TableSkeleton } from "@/components/states/LoadingState";
+import { ErrorState } from "@/components/states/ErrorState";
+import { EmptyState } from "@/components/states/EmptyState";
 
 interface UserRow {
   id: string;
@@ -93,16 +97,14 @@ export default function Users() {
   const [toggleUser, setToggleUser] = useState<UserRow | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+
   // Verificar se é admin
   const isAdmin = profile?.role === "ADMIN";
 
-  // Debounce
-  useEffect(() => {
-    const timer = setTimeout(() => setSearch(searchInput), 300);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
-
   const fetchUsers = async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase.rpc("get_users_with_stats");
       if (error) throw error;
@@ -127,8 +129,17 @@ export default function Users() {
       setCurrentPage(1);
     } catch (error) {
       console.log("Erro ao buscar utilizadores:", error);
+      setError(true);
+    } finally {
+      setLoading(false);
     }
   };
+
+  // Debounce
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(searchInput), 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -253,180 +264,194 @@ export default function Users() {
       </section>
 
       {/* Tabela */}
-      <div className="mt-5">
-        <Table className="bg-white">
-          <TableHeader className="bg-stone-100">
-            <TableRow>
-              <TableHead>Avatar</TableHead>
-              <TableHead>Nome</TableHead>
-              <TableHead>Username</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Observações</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedUsers.length > 0 ? (
-              <>
-                {paginatedUsers.map((u) => (
-                  <TableRow key={u.id} className="h-[60px]">
-                    <TableCell>
-                      <Avatar
-                        name={u.full_name}
-                        username={u.username}
-                        avatarUrl={u.avatar_url}
-                        size={36}
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {u.full_name ?? "—"}
-                    </TableCell>
-                    <TableCell className="text-stone-500">
-                      @{u.username}
-                    </TableCell>
-                    <TableCell className="text-stone-500">{u.email}</TableCell>
-                    <TableCell>
-                      <RoleBadge role={u.role} />
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm">
-                        {u.validated_observations}/{u.total_observations}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {u.is_active ? (
-                        <span className="text-xs text-green-700 font-medium">
-                          Ativo
+      {loading ? (
+        <TableSkeleton rows={6} cols={8} />
+      ) : error ? (
+        <ErrorState onRetry={fetchUsers} />
+      ) : users.length === 0 ? (
+        <EmptyState
+          icon={BrushCleaning}
+          title="Sem utilizadores"
+          description="Nenhum utilizador corresponde aos filtros selecionados."
+        />
+      ) : (
+        <div className="mt-5">
+          <Table className="bg-white">
+            <TableHeader className="bg-stone-100">
+              <TableRow>
+                <TableHead>Avatar</TableHead>
+                <TableHead>Nome</TableHead>
+                <TableHead>Username</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Observações</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedUsers.length > 0 ? (
+                <>
+                  {paginatedUsers.map((u) => (
+                    <TableRow key={u.id} className="h-[60px]">
+                      <TableCell>
+                        <Avatar
+                          name={u.full_name}
+                          username={u.username}
+                          avatarUrl={u.avatar_url}
+                          size={36}
+                        />
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {u.full_name ?? "—"}
+                      </TableCell>
+                      <TableCell className="text-stone-500">
+                        @{u.username}
+                      </TableCell>
+                      <TableCell className="text-stone-500">
+                        {u.email}
+                      </TableCell>
+                      <TableCell>
+                        <RoleBadge role={u.role} />
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">
+                          {u.validated_observations}/{u.total_observations}
                         </span>
-                      ) : (
-                        <span className="text-xs text-red-500 font-medium">
-                          Inativo
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => {
-                            setEditingUser(u);
-                            setNewRole(u.role);
-                          }}
-                          disabled={u.id === user?.id}
-                          className="px-3 py-1.5 text-xs rounded-lg border border-stone-200 hover:bg-stone-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                          title={
-                            u.id === user?.id
-                              ? "Não podes alterar a tua própria role"
-                              : "Alterar role"
-                          }
-                        >
-                          Alterar role
-                        </button>
-                        <button
-                          onClick={() => setToggleUser(u)}
-                          disabled={u.id === user?.id}
-                          className={`p-1.5 rounded-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                            u.is_active
-                              ? "text-red-500 hover:bg-red-50"
-                              : "text-green-600 hover:bg-green-50"
-                          }`}
-                          title={
-                            u.is_active ? "Desativar conta" : "Ativar conta"
-                          }
-                        >
-                          {u.is_active ? (
-                            <UserX size={16} />
-                          ) : (
-                            <UserCheck size={16} />
-                          )}
-                        </button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell>
+                        {u.is_active ? (
+                          <span className="text-xs text-green-700 font-medium">
+                            Ativo
+                          </span>
+                        ) : (
+                          <span className="text-xs text-red-500 font-medium">
+                            Inativo
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => {
+                              setEditingUser(u);
+                              setNewRole(u.role);
+                            }}
+                            disabled={u.id === user?.id}
+                            className="px-3 py-1.5 text-xs rounded-lg border border-stone-200 hover:bg-stone-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            title={
+                              u.id === user?.id
+                                ? "Não podes alterar a tua própria role"
+                                : "Alterar role"
+                            }
+                          >
+                            Alterar role
+                          </button>
+                          <button
+                            onClick={() => setToggleUser(u)}
+                            disabled={u.id === user?.id}
+                            className={`p-1.5 rounded-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                              u.is_active
+                                ? "text-red-500 hover:bg-red-50"
+                                : "text-green-600 hover:bg-green-50"
+                            }`}
+                            title={
+                              u.is_active ? "Desativar conta" : "Ativar conta"
+                            }
+                          >
+                            {u.is_active ? (
+                              <UserX size={16} />
+                            ) : (
+                              <UserCheck size={16} />
+                            )}
+                          </button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
 
-                {Array.from({
-                  length: itemsPerPage - paginatedUsers.length,
-                }).map((_, i) => (
-                  <TableRow
-                    key={`empty-${i}`}
-                    className="h-[60px] hover:bg-transparent border-none"
-                  >
-                    <TableCell colSpan={8} className="py-0"></TableCell>
-                  </TableRow>
-                ))}
-              </>
-            ) : (
-              <>
-                {Array.from({ length: itemsPerPage }).map((_, i) => (
-                  <TableRow
-                    key={`empty-${i}`}
-                    className="h-[60px] hover:bg-transparent border-none"
-                  >
-                    <TableCell
-                      colSpan={8}
-                      className={`py-0 ${i === 0 ? "text-center text-stone-400" : ""}`}
+                  {Array.from({
+                    length: itemsPerPage - paginatedUsers.length,
+                  }).map((_, i) => (
+                    <TableRow
+                      key={`empty-${i}`}
+                      className="h-[60px] hover:bg-transparent border-none"
                     >
-                      {i === 0 ? "Nenhum utilizador encontrado." : ""}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </>
-            )}
-          </TableBody>
-        </Table>
-
-        {/* Paginação */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-5 py-4 border-t border-stone-200">
-            <p className="text-sm text-stone-500">
-              A mostrar {(currentPage - 1) * itemsPerPage + 1} a{" "}
-              {Math.min(currentPage * itemsPerPage, users.length)} de{" "}
-              {users.length}
-            </p>
-            <Pagination className="w-auto mx-0">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    className={
-                      currentPage === 1
-                        ? "pointer-events-none opacity-50"
-                        : "cursor-pointer"
-                    }
-                  />
-                </PaginationItem>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (page) => (
-                    <PaginationItem key={page}>
-                      <PaginationLink
-                        onClick={() => setCurrentPage(page)}
-                        isActive={currentPage === page}
-                        className="cursor-pointer"
+                      <TableCell colSpan={8} className="py-0"></TableCell>
+                    </TableRow>
+                  ))}
+                </>
+              ) : (
+                <>
+                  {Array.from({ length: itemsPerPage }).map((_, i) => (
+                    <TableRow
+                      key={`empty-${i}`}
+                      className="h-[60px] hover:bg-transparent border-none"
+                    >
+                      <TableCell
+                        colSpan={8}
+                        className={`py-0 ${i === 0 ? "text-center text-stone-400" : ""}`}
                       >
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ),
-                )}
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() =>
-                      setCurrentPage((p) => Math.min(totalPages, p + 1))
-                    }
-                    className={
-                      currentPage === totalPages
-                        ? "pointer-events-none opacity-50"
-                        : "cursor-pointer"
-                    }
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </div>
-        )}
-      </div>
+                        {i === 0 ? "Nenhum utilizador encontrado." : ""}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </>
+              )}
+            </TableBody>
+          </Table>
+
+          {/* Paginação */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-5 py-4 border-t border-stone-200">
+              <p className="text-sm text-stone-500">
+                A mostrar {(currentPage - 1) * itemsPerPage + 1} a{" "}
+                {Math.min(currentPage * itemsPerPage, users.length)} de{" "}
+                {users.length}
+              </p>
+              <Pagination className="w-auto mx-0">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      className={
+                        currentPage === 1
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer"
+                      }
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(page)}
+                          isActive={currentPage === page}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ),
+                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      className={
+                        currentPage === totalPages
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer"
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Dialog: Alterar Role */}
       <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>

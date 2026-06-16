@@ -37,6 +37,9 @@ import {
 import { type Observation } from "@/types";
 import StatusBadge from "@/components/StatusBadge";
 import { Link } from "react-router-dom";
+import { TableSkeleton } from "@/components/states/LoadingState";
+import { ErrorState } from "@/components/states/ErrorState";
+import { EmptyState } from "@/components/states/EmptyState";
 
 interface ObservationWithPhoto extends Observation {
   photo_url: string | null;
@@ -53,6 +56,9 @@ export default function Observations() {
   const [observations, setObservations] = useState<ObservationWithPhoto[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
   const itemsPerPage = 6;
 
   const totalPages = Math.ceil(observations.length / itemsPerPage);
@@ -61,68 +67,72 @@ export default function Observations() {
     currentPage * itemsPerPage,
   );
 
-  useEffect(() => {
-    if (authLoading || !user) return;
+  const fetchObservations = async () => {
+    setLoading(true);
+    setError(false);
+    try {
+      const { data, error } = await supabase.rpc("get_observations", {
+        p_status: estado !== "ALL" ? estado : null,
+        p_kingdom: reino !== "ALL" ? reino : null,
+        p_date_from: getDateFrom(timeRange),
+      });
 
-    const fetchObservations = async () => {
-      try {
-        const { data, error } = await supabase.rpc("get_observations", {
-          p_status: estado !== "ALL" ? estado : null,
-          p_kingdom: reino !== "ALL" ? reino : null,
-          p_date_from: getDateFrom(timeRange),
+      if (error) throw error;
+
+      let filtered = data || [];
+
+      if (search.trim() !== "") {
+        const term = search.toLowerCase();
+        filtered = filtered.filter(
+          (obs: Observation) =>
+            obs.suggested_species?.toLowerCase().includes(term) ||
+            obs.scientific_name?.toLowerCase().includes(term) ||
+            obs.common_name_pt?.toLowerCase().includes(term) ||
+            obs.description?.toLowerCase().includes(term),
+        );
+      }
+
+      // Buscar primeira foto de cada observação
+      const obsIds = filtered.map((obs: Observation) => obs.id);
+
+      if (obsIds.length > 0) {
+        const { data: photos } = await supabase
+          .from("photos")
+          .select("observation_id, url")
+          .in("observation_id", obsIds)
+          .order("is_primary", { ascending: false })
+          .order("order_index", { ascending: true });
+
+        const photoMap: Record<string, string> = {};
+        photos?.forEach((p) => {
+          if (!photoMap[p.observation_id]) {
+            photoMap[p.observation_id] = p.url;
+          }
         });
 
-        if (error) throw error;
+        const withPhotos = filtered.map((obs: Observation) => ({
+          ...obs,
+          photo_url: photoMap[obs.id] || null,
+        }));
 
-        let filtered = data || [];
-
-        if (search.trim() !== "") {
-          const term = search.toLowerCase();
-          filtered = filtered.filter(
-            (obs: Observation) =>
-              obs.suggested_species?.toLowerCase().includes(term) ||
-              obs.scientific_name?.toLowerCase().includes(term) ||
-              obs.common_name_pt?.toLowerCase().includes(term) ||
-              obs.description?.toLowerCase().includes(term),
-          );
-        }
-
-        // Buscar primeira foto de cada observação
-        const obsIds = filtered.map((obs: Observation) => obs.id);
-
-        if (obsIds.length > 0) {
-          const { data: photos } = await supabase
-            .from("photos")
-            .select("observation_id, url")
-            .in("observation_id", obsIds)
-            .order("is_primary", { ascending: false })
-            .order("order_index", { ascending: true });
-
-          const photoMap: Record<string, string> = {};
-          photos?.forEach((p) => {
-            if (!photoMap[p.observation_id]) {
-              photoMap[p.observation_id] = p.url;
-            }
-          });
-
-          const withPhotos = filtered.map((obs: Observation) => ({
-            ...obs,
-            photo_url: photoMap[obs.id] || null,
-          }));
-
-          setObservations(withPhotos);
-        } else {
-          setObservations(
-            filtered.map((obs: Observation) => ({ ...obs, photo_url: null })),
-          );
-        }
-
-        setCurrentPage(1);
-      } catch (error) {
-        console.log("Erro ao buscar observações:", error);
+        setObservations(withPhotos);
+      } else {
+        setObservations(
+          filtered.map((obs: Observation) => ({ ...obs, photo_url: null })),
+        );
       }
-    };
 
+      setCurrentPage(1);
+    } catch (error) {
+      console.error("Erro ao buscar observações:", error);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (authLoading || !user) return;
     fetchObservations();
   }, [user, authLoading, estado, reino, timeRange, search]);
 
@@ -223,143 +233,155 @@ export default function Observations() {
         </div>
       </section>
 
-      <div className="mt-5">
-        <Table className="bg-white">
-          <TableCaption className="mt-3 pb-3">
-            Lista de Observações
-          </TableCaption>
-          <TableHeader className="bg-stone-100">
-            <TableRow>
-              <TableHead>Foto</TableHead>
-              <TableHead>Espécie Sugerida</TableHead>
-              <TableHead>Utilizador</TableHead>
-              <TableHead>Localização</TableHead>
-              <TableHead>Data</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {observations.length > 0 ? (
-              <>
-                {paginatedObservations.map((obs) => (
-                  <TableRow key={obs.id} className="h-[60px] max-h-[60px]">
-                    <TableCell>
-                      {obs.photo_url ? (
-                        <img
-                          src={obs.photo_url}
-                          alt=""
-                          className="w-10 h-10 rounded-lg object-cover"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center">
-                          <span className="text-stone-300 text-[10px]">
-                            Sem foto
-                          </span>
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>{obs.suggested_species}</TableCell>
-                    <TableCell>@{obs.username}</TableCell>
-                    <TableCell>
-                      {obs.latitude?.toFixed(4)} | {obs.longitude?.toFixed(4)}
-                    </TableCell>
-                    <TableCell>{formatDate(obs.created_at)}</TableCell>
-                    <TableCell>
-                      <StatusBadge status={obs.status} />
-                    </TableCell>
-                    <TableCell>
-                      <Link to={`/observations/${obs.id}`}>
-                        <Eye strokeWidth={1.5} />
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
+      {loading ? (
+        <TableSkeleton rows={8} cols={6} />
+      ) : error ? (
+        <ErrorState onRetry={fetchObservations} />
+      ) : observations.length === 0 ? (
+        <EmptyState
+          icon={Eye}
+          title="Sem observações"
+          description="Ainda não há observações que correspondam aos filtros selecionados."
+        />
+      ) : (
+        <div className="mt-5">
+          <Table className="bg-white">
+            <TableCaption className="mt-3 pb-3">
+              Lista de Observações
+            </TableCaption>
+            <TableHeader className="bg-stone-100">
+              <TableRow>
+                <TableHead>Foto</TableHead>
+                <TableHead>Espécie Sugerida</TableHead>
+                <TableHead>Utilizador</TableHead>
+                <TableHead>Localização</TableHead>
+                <TableHead>Data</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead>Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {observations.length > 0 ? (
+                <>
+                  {paginatedObservations.map((obs) => (
+                    <TableRow key={obs.id} className="h-[60px] max-h-[60px]">
+                      <TableCell>
+                        {obs.photo_url ? (
+                          <img
+                            src={obs.photo_url}
+                            alt=""
+                            className="w-10 h-10 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-stone-100 flex items-center justify-center">
+                            <span className="text-stone-300 text-[10px]">
+                              Sem foto
+                            </span>
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>{obs.suggested_species}</TableCell>
+                      <TableCell>@{obs.username}</TableCell>
+                      <TableCell>
+                        {obs.latitude?.toFixed(4)} | {obs.longitude?.toFixed(4)}
+                      </TableCell>
+                      <TableCell>{formatDate(obs.created_at)}</TableCell>
+                      <TableCell>
+                        <StatusBadge status={obs.status} />
+                      </TableCell>
+                      <TableCell>
+                        <Link to={`/observations/${obs.id}`}>
+                          <Eye strokeWidth={1.5} />
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
 
-                {Array.from({
-                  length: itemsPerPage - paginatedObservations.length,
-                }).map((_, i) => (
-                  <TableRow
-                    key={`empty-${i}`}
-                    className="h-[60px] max-h-[60px] hover:bg-transparent border-none"
-                  >
-                    <TableCell colSpan={7} className="py-0"></TableCell>
-                  </TableRow>
-                ))}
-              </>
-            ) : (
-              <>
-                {Array.from({ length: itemsPerPage }).map((_, i) => (
-                  <TableRow
-                    key={`empty-${i}`}
-                    className="h-[60px] max-h-[60px] hover:bg-transparent border-none"
-                  >
-                    <TableCell
-                      colSpan={7}
-                      className={
-                        i === 0 ? "text-center text-stone-400 py-0" : "py-0"
-                      }
+                  {Array.from({
+                    length: itemsPerPage - paginatedObservations.length,
+                  }).map((_, i) => (
+                    <TableRow
+                      key={`empty-${i}`}
+                      className="h-[60px] max-h-[60px] hover:bg-transparent border-none"
                     >
-                      {i === 0 ? "Não há observações disponíveis." : ""}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </>
-            )}
-          </TableBody>
-        </Table>
-
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-5 py-4 border-t border-stone-200">
-            <p className="text-sm text-stone-500">
-              A mostrar {(currentPage - 1) * itemsPerPage + 1} a{" "}
-              {Math.min(currentPage * itemsPerPage, observations.length)} de{" "}
-              {observations.length}
-            </p>
-            <Pagination className="w-auto mx-0">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    className={
-                      currentPage === 1
-                        ? "pointer-events-none opacity-50"
-                        : "cursor-pointer"
-                    }
-                  />
-                </PaginationItem>
-
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (page) => (
-                    <PaginationItem key={page}>
-                      <PaginationLink
-                        onClick={() => setCurrentPage(page)}
-                        isActive={currentPage === page}
-                        className="cursor-pointer"
+                      <TableCell colSpan={7} className="py-0"></TableCell>
+                    </TableRow>
+                  ))}
+                </>
+              ) : (
+                <>
+                  {Array.from({ length: itemsPerPage }).map((_, i) => (
+                    <TableRow
+                      key={`empty-${i}`}
+                      className="h-[60px] max-h-[60px] hover:bg-transparent border-none"
+                    >
+                      <TableCell
+                        colSpan={7}
+                        className={
+                          i === 0 ? "text-center text-stone-400 py-0" : "py-0"
+                        }
                       >
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ),
-                )}
+                        {i === 0 ? "Não há observações disponíveis." : ""}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </>
+              )}
+            </TableBody>
+          </Table>
 
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() =>
-                      setCurrentPage((p) => Math.min(totalPages, p + 1))
-                    }
-                    className={
-                      currentPage === totalPages
-                        ? "pointer-events-none opacity-50"
-                        : "cursor-pointer"
-                    }
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </div>
-        )}
-      </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-5 py-4 border-t border-stone-200">
+              <p className="text-sm text-stone-500">
+                A mostrar {(currentPage - 1) * itemsPerPage + 1} a{" "}
+                {Math.min(currentPage * itemsPerPage, observations.length)} de{" "}
+                {observations.length}
+              </p>
+              <Pagination className="w-auto mx-0">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      className={
+                        currentPage === 1
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer"
+                      }
+                    />
+                  </PaginationItem>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(page)}
+                          isActive={currentPage === page}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ),
+                  )}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      className={
+                        currentPage === totalPages
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer"
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
+        </div>
+      )}
     </>
   );
 }

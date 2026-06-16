@@ -21,12 +21,19 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 
-import { type ObservationWithPhoto } from "@/types";
+import { type ObservationWithPhoto, type Observation } from "@/types";
 import { supabase } from "@/lib/supabaseClient";
 import { Link } from "react-router-dom";
+import { TableSkeleton } from "@/components/states/LoadingState";
+import { ErrorState } from "@/components/states/ErrorState";
+import { EmptyState } from "@/components/states/EmptyState";
+import { BrushCleaning } from "lucide-react";
 
 function Dashboard() {
   const { profile, user, loading: authLoading } = useAuth();
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   const [observations, setObservations] = useState<ObservationWithPhoto[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,51 +45,52 @@ function Dashboard() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
+
+  const getPendingObservations = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.rpc("get_observations", {
+        p_status: "PENDING",
+        p_kingdom: null,
+        p_date_from: null,
+      });
+      if (error) throw error;
+      setObservations(data || []);
+
+      const obsIds = (data || []).map((obs: Observation) => obs.id);
+
+      if (obsIds.length > 0) {
+        const { data: photos } = await supabase
+          .from("photos")
+          .select("observation_id, url")
+          .in("observation_id", obsIds)
+          .eq("is_primary", true);
+
+        const photoMap: Record<string, string> = {};
+        photos?.forEach((p) => {
+          if (!photoMap[p.observation_id]) {
+            photoMap[p.observation_id] = p.url;
+          }
+        });
+
+        const withPhotos = (data || []).map((obs: Observation) => ({
+          ...obs,
+          photo_url: photoMap[obs.id] || null,
+        }));
+
+        setObservations(withPhotos);
+      } else {
+        setObservations(data || []);
+      }
+    } catch (error) {
+      console.error("Erro:", error);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => {
     if (authLoading || !user) return;
-
-    const getPendingObservations = async () => {
-      try {
-        const { data, error } = await supabase.rpc("get_observations", {
-          p_status: "PENDING",
-          p_kingdom: null,
-          p_date_from: null,
-        });
-        if (error) throw error;
-        setObservations(data || []);
-
-        const obsIds = (data || []).map((obs: Observation) => obs.id);
-
-        if (obsIds.length > 0) {
-          const { data: photos } = await supabase
-            .from("photos")
-            .select("observation_id, url")
-            .in("observation_id", obsIds)
-            .eq("is_primary", true);
-
-          // Criar mapa de observation_id → url
-          const photoMap: Record<string, string> = {};
-          photos?.forEach((p) => {
-            if (!photoMap[p.observation_id]) {
-              photoMap[p.observation_id] = p.url;
-            }
-          });
-
-          // Associar foto a cada observação
-          const withPhotos = (data || []).map((obs: Observation) => ({
-            ...obs,
-            photo_url: photoMap[obs.id] || null,
-          }));
-
-          setObservations(withPhotos);
-        } else {
-          setObservations(data || []);
-        }
-      } catch (error) {
-        console.log("Erro:", error);
-      }
-    };
-
     getPendingObservations();
   }, [user, authLoading]);
 
@@ -119,84 +127,99 @@ function Dashboard() {
           </span>
         </div>
 
-        <div className="min-h-[350px]">
-          <Table>
-            <TableHeader className="bg-stone-100">
-              <TableRow>
-                <TableHead>Foto</TableHead>
-                <TableHead>Utilizador</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead>Localização</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedObservations.length > 0 ? (
-                <>
-                  {paginatedObservations.map((obs) => (
-                    <TableRow key={obs.id} className="h-[68px]">
-                      <TableCell>
-                        {obs.photo_url ? (
-                          <img
-                            src={obs.photo_url}
-                            alt=""
-                            className="w-12 h-12 rounded-lg object-cover"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-lg bg-stone-100 flex items-center justify-center">
-                            <span className="text-stone-300 text-xs">
-                              Sem foto
-                            </span>
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>{obs.username}</TableCell>
-                      <TableCell>{obs.description}</TableCell>
-                      <TableCell>{formatDate(obs.observed_at)}</TableCell>
-                      <TableCell>
-                        {obs.latitude + " | " + obs.longitude}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Link
-                            to={`/observations/${obs.id}`}
-                            className="bg-green-800 px-3 py-2 rounded-lg text-white font-semibold cursor-pointer"
-                          >
-                            Validar
-                          </Link>
-                          <Link
-                            to={`/observations/${obs.id}`}
-                            className="text-orange-400 border border-orange-200 font-medium bg-orange-50 px-3 py-2 rounded-lg cursor-pointer"
-                          >
-                            Rejeitar
-                          </Link>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-
-                  {Array.from({
-                    length: itemsPerPage - paginatedObservations.length,
-                  }).map((_, i) => (
-                    <TableRow
-                      key={`empty-${i}`}
-                      className="h-[68px] hover:bg-transparent"
-                    >
-                      <TableCell colSpan={6}></TableCell>
-                    </TableRow>
-                  ))}
-                </>
-              ) : (
-                <TableRow className="h-[68px]">
-                  <TableCell colSpan={6} className="text-center text-stone-400">
-                    Nenhuma observação pendente
-                  </TableCell>
+        {loading ? (
+          <TableSkeleton rows={5} cols={6} />
+        ) : error ? (
+          <ErrorState onRetry={getPendingObservations} />
+        ) : observations.length === 0 ? (
+          <EmptyState
+            icon={BrushCleaning}
+            title="Não há observações pendentes"
+            description="Nehuma observação pendente disponível"
+          />
+        ) : (
+          <div className="min-h-[350px]">
+            <Table>
+              <TableHeader className="bg-stone-100">
+                <TableRow>
+                  <TableHead>Foto</TableHead>
+                  <TableHead>Utilizador</TableHead>
+                  <TableHead>Descrição</TableHead>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Localização</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {paginatedObservations.length > 0 ? (
+                  <>
+                    {paginatedObservations.map((obs) => (
+                      <TableRow key={obs.id} className="h-[68px]">
+                        <TableCell>
+                          {obs.photo_url ? (
+                            <img
+                              src={obs.photo_url}
+                              alt=""
+                              className="w-12 h-12 rounded-lg object-cover"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-lg bg-stone-100 flex items-center justify-center">
+                              <span className="text-stone-300 text-xs">
+                                Sem foto
+                              </span>
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>{obs.username}</TableCell>
+                        <TableCell>{obs.description}</TableCell>
+                        <TableCell>{formatDate(obs.observed_at)}</TableCell>
+                        <TableCell>
+                          {obs.latitude + " | " + obs.longitude}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Link
+                              to={`/observations/${obs.id}`}
+                              className="bg-green-800 px-3 py-2 rounded-lg text-white font-semibold cursor-pointer"
+                            >
+                              Validar
+                            </Link>
+                            <Link
+                              to={`/observations/${obs.id}`}
+                              className="text-orange-400 border border-orange-200 font-medium bg-orange-50 px-3 py-2 rounded-lg cursor-pointer"
+                            >
+                              Rejeitar
+                            </Link>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+
+                    {Array.from({
+                      length: itemsPerPage - paginatedObservations.length,
+                    }).map((_, i) => (
+                      <TableRow
+                        key={`empty-${i}`}
+                        className="h-[68px] hover:bg-transparent"
+                      >
+                        <TableCell colSpan={6}></TableCell>
+                      </TableRow>
+                    ))}
+                  </>
+                ) : (
+                  <TableRow className="h-[68px]">
+                    <TableCell
+                      colSpan={6}
+                      className="text-center text-stone-400"
+                    >
+                      Nenhuma observação pendente
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
 
         {/* Paginação */}
         {/* Paginação */}

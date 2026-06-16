@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/hooks/useAuth";
-import { Search, Pencil, Trash2, ShieldCheck, Plus } from "lucide-react";
+import {
+  Search,
+  Pencil,
+  Trash2,
+  ShieldCheck,
+  Plus,
+  BrushCleaning,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
@@ -40,6 +47,9 @@ import {
 import { Link } from "react-router-dom";
 
 import { type Species } from "@/types";
+import { TableSkeleton } from "@/components/states/LoadingState";
+import { ErrorState } from "@/components/states/ErrorState";
+import { EmptyState } from "@/components/states/EmptyState";
 
 function KingdomBadge({ kingdom }: { kingdom: string }) {
   const styles: Record<string, string> = {
@@ -71,6 +81,8 @@ export default function Species() {
   const [kingdom, setKingdom] = useState("ALL");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -102,6 +114,37 @@ export default function Species() {
     }
   };
 
+  const fetchSpecies = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.rpc("get_species_with_count");
+      if (error) throw error;
+
+      let filtered = data || [];
+
+      if (kingdom !== "ALL") {
+        filtered = filtered.filter((s: Species) => s.kingdom === kingdom);
+      }
+
+      if (search.trim() !== "") {
+        const term = search.toLowerCase();
+        filtered = filtered.filter(
+          (s: Species) =>
+            s.scientific_name?.toLowerCase().includes(term) ||
+            s.common_name_pt?.toLowerCase().includes(term),
+        );
+      }
+
+      setSpecies(filtered);
+      setCurrentPage(1);
+    } catch (error) {
+      console.error("Erro ao buscar espécies:", error);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => setSearch(searchInput), 300);
     return () => clearTimeout(timer);
@@ -110,34 +153,6 @@ export default function Species() {
   // Buscar espécies
   useEffect(() => {
     if (authLoading || !user) return;
-
-    const fetchSpecies = async () => {
-      try {
-        const { data, error } = await supabase.rpc("get_species_with_count");
-        if (error) throw error;
-
-        let filtered = data || [];
-
-        if (kingdom !== "ALL") {
-          filtered = filtered.filter((s: Species) => s.kingdom === kingdom);
-        }
-
-        if (search.trim() !== "") {
-          const term = search.toLowerCase();
-          filtered = filtered.filter(
-            (s: Species) =>
-              s.scientific_name?.toLowerCase().includes(term) ||
-              s.common_name_pt?.toLowerCase().includes(term),
-          );
-        }
-
-        setSpecies(filtered);
-        setCurrentPage(1);
-      } catch (error) {
-        console.log("Erro ao buscar espécies:", error);
-      }
-    };
-
     fetchSpecies();
   }, [user, authLoading, kingdom, search]);
 
@@ -191,142 +206,157 @@ export default function Species() {
       </section>
 
       {/* Tabela */}
-      <div className="mt-5">
-        <Table className="bg-white">
-          <TableHeader className="bg-stone-100">
-            <TableRow>
-              <TableHead>Nome Científico</TableHead>
-              <TableHead>Nome Comum (PT)</TableHead>
-              <TableHead>Reino</TableHead>
-              <TableHead>Género</TableHead>
-              <TableHead>Família</TableHead>
-              <TableHead>Protegida</TableHead>
-              <TableHead>Observações</TableHead>
-              <TableHead>Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedSpecies.length > 0 ? (
-              <>
-                {paginatedSpecies.map((sp) => (
-                  <TableRow key={sp.id} className="h-[60px]">
-                    <TableCell className="font-medium italic">
-                      {sp.scientific_name}
+      {loading ? (
+        <TableSkeleton rows={7} cols={8} />
+      ) : error ? (
+        <ErrorState onRetry={fetchSpecies} />
+      ) : species.length === 0 ? (
+        <EmptyState
+          icon={BrushCleaning}
+          title="Sem espécies"
+          description="Nenhuma espécie corresponde aos filtros selecionados."
+        />
+      ) : (
+        <div className="mt-5">
+          <Table className="bg-white">
+            <TableHeader className="bg-stone-100">
+              <TableRow>
+                <TableHead>Nome Científico</TableHead>
+                <TableHead>Nome Comum (PT)</TableHead>
+                <TableHead>Reino</TableHead>
+                <TableHead>Género</TableHead>
+                <TableHead>Família</TableHead>
+                <TableHead>Protegida</TableHead>
+                <TableHead>Observações</TableHead>
+                <TableHead>Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedSpecies.length > 0 ? (
+                <>
+                  {paginatedSpecies.map((sp) => (
+                    <TableRow key={sp.id} className="h-[60px]">
+                      <TableCell className="font-medium italic">
+                        {sp.scientific_name}
+                      </TableCell>
+                      <TableCell>{sp.common_name_pt ?? "—"}</TableCell>
+                      <TableCell>
+                        <KingdomBadge kingdom={sp.kingdom} />
+                      </TableCell>
+                      <TableCell className="italic">
+                        {sp.genus_name ?? "—"}
+                      </TableCell>
+                      <TableCell>{sp.family_name ?? "—"}</TableCell>
+                      <TableCell>
+                        {sp.is_protected ? (
+                          <ShieldCheck size={18} className="text-green-600" />
+                        ) : (
+                          <span className="text-stone-300">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>{sp.observation_count}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <button className="text-stone-400 hover:text-stone-600 cursor-pointer">
+                            <Link to={`/species/${sp.id}`}>
+                              <Pencil size={16} />
+                            </Link>
+                          </button>
+                          <button
+                            onClick={() => setDeleteId(sp.id)}
+                            className="text-stone-400 hover:text-red-500 cursor-pointer"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+
+                  {/* Linhas vazias */}
+                  {Array.from({
+                    length: itemsPerPage - paginatedSpecies.length,
+                  }).map((_, i) => (
+                    <TableRow
+                      key={`empty-${i}`}
+                      className="h-[60px] hover:bg-transparent border-none"
+                    >
+                      <TableCell colSpan={7}></TableCell>
+                    </TableRow>
+                  ))}
+                </>
+              ) : (
+                <>
+                  <TableRow className="h-[60px]">
+                    <TableCell
+                      colSpan={7}
+                      className="text-center text-stone-400"
+                    >
+                      Nenhuma espécie encontrada.
                     </TableCell>
-                    <TableCell>{sp.common_name_pt ?? "—"}</TableCell>
-                    <TableCell>
-                      <KingdomBadge kingdom={sp.kingdom} />
-                    </TableCell>
-                    <TableCell className="italic">
-                      {sp.genus_name ?? "—"}
-                    </TableCell>
-                    <TableCell>{sp.family_name ?? "—"}</TableCell>
-                    <TableCell>
-                      {sp.is_protected ? (
-                        <ShieldCheck size={18} className="text-green-600" />
-                      ) : (
-                        <span className="text-stone-300">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>{sp.observation_count}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <button className="text-stone-400 hover:text-stone-600 cursor-pointer">
-                          <Link to={`/species/${sp.id}`}>
-                            <Pencil size={16} />
-                          </Link>
-                        </button>
-                        <button
-                          onClick={() => setDeleteId(sp.id)}
-                          className="text-stone-400 hover:text-red-500 cursor-pointer"
+                  </TableRow>
+                  {Array.from({ length: itemsPerPage - 1 }).map((_, i) => (
+                    <TableRow
+                      key={`empty-${i}`}
+                      className="h-[60px] hover:bg-transparent border-none"
+                    >
+                      <TableCell colSpan={7}></TableCell>
+                    </TableRow>
+                  ))}
+                </>
+              )}
+            </TableBody>
+          </Table>
+
+          {/* Paginação */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-5 py-4 border-t border-stone-200">
+              <p className="text-sm text-stone-500">
+                Página {currentPage} de {totalPages}
+              </p>
+              <Pagination className="w-auto mx-0">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      className={
+                        currentPage === 1
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer"
+                      }
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(page)}
+                          isActive={currentPage === page}
+                          className="cursor-pointer"
                         >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-
-                {/* Linhas vazias */}
-                {Array.from({
-                  length: itemsPerPage - paginatedSpecies.length,
-                }).map((_, i) => (
-                  <TableRow
-                    key={`empty-${i}`}
-                    className="h-[60px] hover:bg-transparent border-none"
-                  >
-                    <TableCell colSpan={7}></TableCell>
-                  </TableRow>
-                ))}
-              </>
-            ) : (
-              <>
-                <TableRow className="h-[60px]">
-                  <TableCell colSpan={7} className="text-center text-stone-400">
-                    Nenhuma espécie encontrada.
-                  </TableCell>
-                </TableRow>
-                {Array.from({ length: itemsPerPage - 1 }).map((_, i) => (
-                  <TableRow
-                    key={`empty-${i}`}
-                    className="h-[60px] hover:bg-transparent border-none"
-                  >
-                    <TableCell colSpan={7}></TableCell>
-                  </TableRow>
-                ))}
-              </>
-            )}
-          </TableBody>
-        </Table>
-
-        {/* Paginação */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between px-5 py-4 border-t border-stone-200">
-            <p className="text-sm text-stone-500">
-              Página {currentPage} de {totalPages}
-            </p>
-            <Pagination className="w-auto mx-0">
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    className={
-                      currentPage === 1
-                        ? "pointer-events-none opacity-50"
-                        : "cursor-pointer"
-                    }
-                  />
-                </PaginationItem>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (page) => (
-                    <PaginationItem key={page}>
-                      <PaginationLink
-                        onClick={() => setCurrentPage(page)}
-                        isActive={currentPage === page}
-                        className="cursor-pointer"
-                      >
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ),
-                )}
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() =>
-                      setCurrentPage((p) => Math.min(totalPages, p + 1))
-                    }
-                    className={
-                      currentPage === totalPages
-                        ? "pointer-events-none opacity-50"
-                        : "cursor-pointer"
-                    }
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </div>
-        )}
-      </div>
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ),
+                  )}
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      className={
+                        currentPage === totalPages
+                          ? "pointer-events-none opacity-50"
+                          : "cursor-pointer"
+                      }
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
+        </div>
+      )}
 
       <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <DialogContent className="max-w-md">
