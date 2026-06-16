@@ -25,6 +25,8 @@ import { supabase } from "@/lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
+import image from "../assets/BioRegisto-02.png";
+
 function Login() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
@@ -64,24 +66,9 @@ function Login() {
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="text-center text-3xl py-3 pb-0 flex flex-col items-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="40"
-                height="40"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#00802d"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                className="lucide lucide-leaf-icon lucide-leaf m-4"
-              >
-                <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
-                <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
-              </svg>
-              BioRegisto
+              <img src={image} width={300} />
             </CardTitle>
-            <CardDescription className="text-center pt-0">
+            <CardDescription className="text-center pt-2">
               BackOffice
             </CardDescription>
           </CardHeader>
