@@ -18,13 +18,14 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
+import TaxonomyCascade from "@/components/TaxonomyCascade";
 
 interface Species {
   id: string;
   scientific_name: string;
   common_name_pt: string | null;
   kingdom: string;
-  family: string | null;
+  family_name: string | null;
   is_protected: boolean;
 }
 
@@ -38,16 +39,12 @@ export default function CreateSpeciesModal({
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const [genusId, setGenusId] = useState<string | null>(null);
   const [form, setForm] = useState({
     scientific_name: "",
     common_name_pt: "",
     common_name_en: "",
     kingdom: "",
-    phylum: "",
-    class: "",
-    order: "",
-    family: "",
-    genus: "",
     description: "",
     is_protected: false,
   });
@@ -62,19 +59,20 @@ export default function CreateSpeciesModal({
       common_name_pt: "",
       common_name_en: "",
       kingdom: "",
-      phylum: "",
-      class: "",
-      order: "",
-      family: "",
-      genus: "",
       description: "",
       is_protected: false,
     });
+    setGenusId(null);
   };
 
   const handleSubmit = async () => {
     if (!form.scientific_name.trim() || !form.kingdom) {
       toast.error("Nome científico e reino são obrigatórios.");
+      return;
+    }
+
+    if (!genusId) {
+      toast.error("Seleciona a classificação taxonómica até ao género.");
       return;
     }
 
@@ -87,29 +85,30 @@ export default function CreateSpeciesModal({
           common_name_pt: form.common_name_pt.trim() || null,
           common_name_en: form.common_name_en.trim() || null,
           kingdom: form.kingdom,
-          phylum: form.phylum.trim() || null,
-          class: form.class.trim() || null,
-          order: form.order.trim() || null,
-          family: form.family.trim() || null,
-          genus: form.genus.trim() || null,
+          genus_id: genusId,
           description: form.description.trim() || null,
           is_protected: form.is_protected,
         })
-        .select()
+        .select(
+          "id, scientific_name, common_name_pt, kingdom, is_protected, genera(families(name))",
+        )
         .single();
 
       if (error) throw error;
 
       toast.success("Espécie criada com sucesso!", {
-        description: `${data.scientific_name} foi adicionadadd.`,
+        description: `${data.scientific_name} foi adicionada e selecionada.`,
       });
+
+      // Achatar family_name vindo do join aninhado
+      const family_name = (data as any).genera?.families?.name ?? null;
 
       onCreated({
         id: data.id,
         scientific_name: data.scientific_name,
         common_name_pt: data.common_name_pt,
         kingdom: data.kingdom,
-        family: data.family,
+        family_name,
         is_protected: data.is_protected,
       });
 
@@ -119,6 +118,7 @@ export default function CreateSpeciesModal({
       if (error?.code === "23505") {
         toast.error("Já existe uma espécie com este nome científico.");
       } else {
+        console.log("Erro:", error);
         toast.error("Erro ao criar espécie.");
       }
     } finally {
@@ -141,7 +141,7 @@ export default function CreateSpeciesModal({
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-6 mt-4">
-          {/* Coluna esquerda */}
+          {/* Coluna esquerda — Identificação */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-stone-500">
               Identificação
@@ -194,7 +194,13 @@ export default function CreateSpeciesModal({
               <label className="text-xs text-stone-500 uppercase">
                 Reino *
               </label>
-              <Select onValueChange={(v) => handleChange("kingdom", v)}>
+              <Select
+                value={form.kingdom}
+                onValueChange={(v) => {
+                  handleChange("kingdom", v);
+                  setGenusId(null);
+                }}
+              >
                 <SelectTrigger className="mt-1 w-full bg-white">
                   <SelectValue placeholder="Selecionar reino" />
                 </SelectTrigger>
@@ -238,59 +244,22 @@ export default function CreateSpeciesModal({
             </div>
           </div>
 
-          {/* Coluna direita */}
+          {/* Coluna direita — Taxonomia em cascata */}
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-stone-500">
               Classificação Taxonómica
             </h4>
 
-            <div>
-              <label className="text-xs text-stone-500 uppercase">Filo</label>
-              <Input
-                className="mt-1 bg-white"
-                placeholder="ex: Chordata"
-                value={form.phylum}
-                onChange={(e) => handleChange("phylum", e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-stone-500 uppercase">Classe</label>
-              <Input
-                className="mt-1 bg-white"
-                placeholder="ex: Mammalia"
-                value={form.class}
-                onChange={(e) => handleChange("class", e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-stone-500 uppercase">Ordem</label>
-              <Input
-                className="mt-1 bg-white"
-                placeholder="ex: Carnivora"
-                value={form.order}
-                onChange={(e) => handleChange("order", e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-stone-500 uppercase">
-                Família
-              </label>
-              <Input
-                className="mt-1 bg-white"
-                placeholder="ex: Fagaceae"
-                value={form.family}
-                onChange={(e) => handleChange("family", e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-stone-500 uppercase">Género</label>
-              <Input
-                className="mt-1 bg-white"
-                placeholder="ex: Quercus"
-                value={form.genus}
-                onChange={(e) => handleChange("genus", e.target.value)}
-              />
-            </div>
+            {!form.kingdom && (
+              <p className="text-xs text-stone-400">
+                Seleciona primeiro o reino para escolher a taxonomia.
+              </p>
+            )}
+
+            <TaxonomyCascade
+              kingdom={form.kingdom}
+              onGenusSelected={setGenusId}
+            />
           </div>
         </div>
 
