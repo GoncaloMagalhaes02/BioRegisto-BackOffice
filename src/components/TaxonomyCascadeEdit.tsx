@@ -1,13 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import TaxLevelPicker from "@/components/TaxLevelPicker";
 
 interface TaxItem {
   id: string;
@@ -47,7 +40,6 @@ export default function TaxonomyCascadeEdit({
 
   const [initialized, setInitialized] = useState(false);
 
-  // Carregar filos quando há reino
   useEffect(() => {
     if (!kingdom) return;
     supabase.rpc("get_phylums", { p_kingdom: kingdom }).then(({ data }) => {
@@ -55,7 +47,7 @@ export default function TaxonomyCascadeEdit({
     });
   }, [kingdom]);
 
-  // Pré-preencher os valores iniciais (uma vez só)
+  // Pré-preencher (uma vez)
   useEffect(() => {
     if (initialized || !initial || phylums.length === 0) return;
 
@@ -97,7 +89,6 @@ export default function TaxonomyCascadeEdit({
     init();
   }, [initial, phylums, initialized]);
 
-  // Carregamentos em cascata (quando o utilizador muda manualmente)
   useEffect(() => {
     if (!phylum || !initialized) return;
     supabase
@@ -126,7 +117,6 @@ export default function TaxonomyCascadeEdit({
       .then(({ data }) => setGenera(data || []));
   }, [family]);
 
-  // Comunicar o género ao pai
   useEffect(() => {
     onGenusSelected(genus || null);
   }, [genus]);
@@ -151,131 +141,79 @@ export default function TaxonomyCascadeEdit({
     }
   }
 
-  const selectCls = "w-full bg-white";
-
   return (
     <div className="space-y-3">
-      <div>
-        <label className="text-xs text-stone-500 uppercase">Filo</label>
-        <Select
-          value={phylum}
-          onValueChange={(v) => {
-            resetFrom("class");
-            setPhylum(v);
-          }}
-          disabled={phylums.length === 0}
-        >
-          <SelectTrigger className={`mt-1 ${selectCls}`}>
-            <SelectValue placeholder="Selecionar filo" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {phylums.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
+      <TaxLevelPicker
+        label="Filo"
+        placeholder="Selecionar filo"
+        items={phylums}
+        value={phylum}
+        onChange={(v) => {
+          resetFrom("class");
+          setPhylum(v);
+        }}
+        disabled={phylums.length === 0}
+        createRpc="create_phylum"
+        createParams={{ p_kingdom: kingdom }}
+        onCreated={(item) => setPhylums((prev) => [...prev, item])}
+      />
 
-      <div>
-        <label className="text-xs text-stone-500 uppercase">Classe</label>
-        <Select
-          value={classId}
-          onValueChange={(v) => {
-            resetFrom("order");
-            setClassId(v);
-          }}
-          disabled={!phylum || classes.length === 0}
-        >
-          <SelectTrigger className={`mt-1 ${selectCls}`}>
-            <SelectValue placeholder="Selecionar classe" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {classes.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
+      <TaxLevelPicker
+        label="Classe"
+        placeholder="Selecionar classe"
+        items={classes}
+        value={classId}
+        onChange={(v) => {
+          resetFrom("order");
+          setClassId(v);
+        }}
+        disabled={!phylum}
+        createRpc="create_class"
+        createParams={{ p_phylum_id: phylum }}
+        onCreated={(item) => setClasses((prev) => [...prev, item])}
+      />
 
-      <div>
-        <label className="text-xs text-stone-500 uppercase">Ordem</label>
-        <Select
-          value={order}
-          onValueChange={(v) => {
-            resetFrom("family");
-            setOrder(v);
-          }}
-          disabled={!classId || orders.length === 0}
-        >
-          <SelectTrigger className={`mt-1 ${selectCls}`}>
-            <SelectValue placeholder="Selecionar ordem" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {orders.map((o) => (
-                <SelectItem key={o.id} value={o.id}>
-                  {o.name}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
+      <TaxLevelPicker
+        label="Ordem"
+        placeholder="Selecionar ordem"
+        items={orders}
+        value={order}
+        onChange={(v) => {
+          resetFrom("family");
+          setOrder(v);
+        }}
+        disabled={!classId}
+        createRpc="create_order"
+        createParams={{ p_class_id: classId }}
+        onCreated={(item) => setOrders((prev) => [...prev, item])}
+      />
 
-      <div>
-        <label className="text-xs text-stone-500 uppercase">Família</label>
-        <Select
-          value={family}
-          onValueChange={(v) => {
-            resetFrom("genus");
-            setFamily(v);
-          }}
-          disabled={!order || families.length === 0}
-        >
-          <SelectTrigger className={`mt-1 ${selectCls}`}>
-            <SelectValue placeholder="Selecionar família" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {families.map((f) => (
-                <SelectItem key={f.id} value={f.id}>
-                  {f.name}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
+      <TaxLevelPicker
+        label="Família"
+        placeholder="Selecionar família"
+        items={families}
+        value={family}
+        onChange={(v) => {
+          resetFrom("genus");
+          setFamily(v);
+        }}
+        disabled={!order}
+        createRpc="create_family"
+        createParams={{ p_order_id: order }}
+        onCreated={(item) => setFamilies((prev) => [...prev, item])}
+      />
 
-      <div>
-        <label className="text-xs text-stone-500 uppercase">Género</label>
-        <Select
-          value={genus}
-          onValueChange={setGenus}
-          disabled={!family || genera.length === 0}
-        >
-          <SelectTrigger className={`mt-1 ${selectCls}`}>
-            <SelectValue placeholder="Selecionar género" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              {genera.map((g) => (
-                <SelectItem key={g.id} value={g.id}>
-                  {g.name}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
+      <TaxLevelPicker
+        label="Género"
+        placeholder="Selecionar género"
+        items={genera}
+        value={genus}
+        onChange={setGenus}
+        disabled={!family}
+        createRpc="create_genus"
+        createParams={{ p_family_id: family }}
+        onCreated={(item) => setGenera((prev) => [...prev, item])}
+      />
     </div>
   );
 }

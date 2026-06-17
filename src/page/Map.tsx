@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Link } from "react-router-dom";
+import { ShieldCheck } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/select";
 import HeatmapLayer from "@/components/HeatmapLayer";
 import MarkerClusterGroup from "react-leaflet-cluster";
-import "leaflet/dist/leaflet.css";
 
 interface MapObservation {
   id: string;
@@ -23,11 +23,14 @@ interface MapObservation {
   observed_at: string;
   latitude: number;
   longitude: number;
+  user_id: string;
   username: string;
   full_name: string;
+  species_id: string | null;
   scientific_name: string | null;
   common_name_pt: string | null;
   kingdom: string | null;
+  is_protected: boolean;
   photo_url: string | null;
 }
 
@@ -59,7 +62,13 @@ const defaultIcon = createIcon("#6B7280");
 export default function Map() {
   const { user, loading: authLoading } = useAuth();
   const [observations, setObservations] = useState<MapObservation[]>([]);
+
+  // Filtros
   const [kingdom, setKingdom] = useState("ALL");
+  const [speciesFilter, setSpeciesFilter] = useState("ALL");
+  const [observerFilter, setObserverFilter] = useState("ALL");
+  const [timeRange, setTimeRange] = useState("ALL");
+  const [protectedOnly, setProtectedOnly] = useState(false);
   const [viewMode, setViewMode] = useState<"markers" | "heatmap">("markers");
 
   useEffect(() => {
@@ -78,12 +87,50 @@ export default function Map() {
     fetchObservations();
   }, [user, authLoading]);
 
-  const filtered =
-    kingdom === "ALL"
-      ? observations
-      : observations.filter((o) => o.kingdom === kingdom);
+  function getDateFrom(range: string): number | null {
+    if (range === "ALL") return null;
+    const now = new Date();
+    const days = { "7D": 7, "30D": 30, "90D": 90 }[range];
+    if (days === undefined) return null;
+    const date = new Date(now);
+    date.setDate(date.getDate() - days);
+    date.setHours(0, 0, 0, 0);
+    return date.getTime();
+  }
 
-  // Pontos para o heatmap (declarado depois de filtered)
+  // Listas únicas para os dropdowns
+  const speciesList = Array.from(
+    new Map(
+      observations
+        .filter((o) => o.species_id)
+        .map((o) => [
+          o.species_id,
+          { id: o.species_id!, name: o.scientific_name ?? "—" },
+        ]),
+    ).values(),
+  ).sort((a, b) => a.name.localeCompare(b.name));
+
+  const observersList = Array.from(
+    new Map(
+      observations.map((o) => [
+        o.user_id,
+        { id: o.user_id, name: o.full_name || o.username },
+      ]),
+    ).values(),
+  ).sort((a, b) => a.name.localeCompare(b.name));
+
+  // Aplicar todos os filtros
+  const filtered = observations.filter((o) => {
+    if (kingdom !== "ALL" && o.kingdom !== kingdom) return false;
+    if (speciesFilter !== "ALL" && o.species_id !== speciesFilter) return false;
+    if (observerFilter !== "ALL" && o.user_id !== observerFilter) return false;
+    if (protectedOnly && !o.is_protected) return false;
+    const dateFrom = getDateFrom(timeRange);
+    if (dateFrom !== null && new Date(o.observed_at).getTime() < dateFrom)
+      return false;
+    return true;
+  });
+
   const heatPoints: [number, number][] = filtered.map((obs) => [
     obs.latitude,
     obs.longitude,
@@ -103,6 +150,21 @@ export default function Map() {
     FUNGI: observations.filter((o) => o.kingdom === "FUNGI").length,
   };
 
+  const hasActiveFilters =
+    kingdom !== "ALL" ||
+    speciesFilter !== "ALL" ||
+    observerFilter !== "ALL" ||
+    timeRange !== "ALL" ||
+    protectedOnly;
+
+  const clearFilters = () => {
+    setKingdom("ALL");
+    setSpeciesFilter("ALL");
+    setObserverFilter("ALL");
+    setTimeRange("ALL");
+    setProtectedOnly(false);
+  };
+
   return (
     <>
       <header className="flex items-center justify-between">
@@ -113,55 +175,126 @@ export default function Map() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Toggle Marcadores / Heatmap */}
-          <div className="flex gap-1 bg-stone-100 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode("markers")}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-colors ${
-                viewMode === "markers"
-                  ? "bg-white text-stone-800 shadow-sm"
-                  : "text-stone-500 hover:text-stone-700"
-              }`}
-            >
-              Marcadores
-            </button>
-            <button
-              onClick={() => setViewMode("heatmap")}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-colors ${
-                viewMode === "heatmap"
-                  ? "bg-white text-stone-800 shadow-sm"
-                  : "text-stone-500 hover:text-stone-700"
-              }`}
-            >
-              Heatmap
-            </button>
-          </div>
-
-          {/* Filtro de reino */}
-          <div className="w-48">
-            <Select onValueChange={setKingdom}>
-              <SelectTrigger className="w-full bg-white">
-                <SelectValue placeholder="Todos os reinos" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="ALL">
-                    Todos os reinos ({observations.length})
-                  </SelectItem>
-                  <SelectItem value="ANIMALIA">
-                    Animais ({counts.ANIMALIA})
-                  </SelectItem>
-                  <SelectItem value="PLANTAE">
-                    Plantas ({counts.PLANTAE})
-                  </SelectItem>
-                  <SelectItem value="FUNGI">Fungos ({counts.FUNGI})</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Toggle Marcadores / Heatmap */}
+        <div className="flex gap-1 bg-stone-100 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode("markers")}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-colors ${
+              viewMode === "markers"
+                ? "bg-white text-stone-800 shadow-sm"
+                : "text-stone-500 hover:text-stone-700"
+            }`}
+          >
+            Marcadores
+          </button>
+          <button
+            onClick={() => setViewMode("heatmap")}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium cursor-pointer transition-colors ${
+              viewMode === "heatmap"
+                ? "bg-white text-stone-800 shadow-sm"
+                : "text-stone-500 hover:text-stone-700"
+            }`}
+          >
+            Heatmap
+          </button>
         </div>
       </header>
+
+      {/* Barra de filtros */}
+      <section className="mt-5 bg-white rounded-lg border border-stone-200 p-4">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Reino */}
+          <Select value={kingdom} onValueChange={setKingdom}>
+            <SelectTrigger className="w-40 bg-white">
+              <SelectValue placeholder="Reino" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="ALL">Todos os reinos</SelectItem>
+                <SelectItem value="ANIMALIA">
+                  Animais ({counts.ANIMALIA})
+                </SelectItem>
+                <SelectItem value="PLANTAE">
+                  Plantas ({counts.PLANTAE})
+                </SelectItem>
+                <SelectItem value="FUNGI">Fungos ({counts.FUNGI})</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+
+          {/* Espécie */}
+          <Select value={speciesFilter} onValueChange={setSpeciesFilter}>
+            <SelectTrigger className="w-48 bg-white">
+              <SelectValue placeholder="Espécie" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="ALL">Todas as espécies</SelectItem>
+                {speciesList.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+
+          {/* Observador */}
+          <Select value={observerFilter} onValueChange={setObserverFilter}>
+            <SelectTrigger className="w-48 bg-white">
+              <SelectValue placeholder="Observador" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="ALL">Todos os observadores</SelectItem>
+                {observersList.map((o) => (
+                  <SelectItem key={o.id} value={o.id}>
+                    {o.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+
+          {/* Período */}
+          <Select value={timeRange} onValueChange={setTimeRange}>
+            <SelectTrigger className="w-40 bg-white">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="ALL">Todo o período</SelectItem>
+                <SelectItem value="7D">Últimos 7 dias</SelectItem>
+                <SelectItem value="30D">Últimos 30 dias</SelectItem>
+                <SelectItem value="90D">Últimos 3 meses</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+
+          {/* Só protegidas */}
+          <button
+            onClick={() => setProtectedOnly((p) => !p)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm border cursor-pointer transition-colors ${
+              protectedOnly
+                ? "bg-green-50 border-green-300 text-green-700"
+                : "bg-white border-stone-200 text-stone-600 hover:bg-stone-50"
+            }`}
+          >
+            <ShieldCheck size={16} />
+            Só protegidas
+          </button>
+
+          {/* Limpar filtros */}
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="text-xs text-stone-500 hover:text-stone-700 cursor-pointer underline ml-auto"
+            >
+              Limpar filtros
+            </button>
+          )}
+        </div>
+      </section>
 
       <div className="mt-6 grid grid-cols-3 gap-6">
         {/* Mapa */}
@@ -184,7 +317,6 @@ export default function Map() {
                 disableClusteringAtZoom={10}
                 iconCreateFunction={(cluster: any) => {
                   const count = cluster.getChildCount();
-                  // Cor do cluster conforme o nº de observações
                   let size = 40;
                   let color = "#2D5A3D";
                   if (count > 50) {

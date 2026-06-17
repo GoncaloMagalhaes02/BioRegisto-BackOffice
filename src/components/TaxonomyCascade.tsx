@@ -43,11 +43,9 @@ export default function TaxonomyCascade({
   // Cascata
   useEffect(() => {
     if (!phylum) return;
-    console.log("A carregar classes para o filo:", phylum);
     supabase
       .rpc("get_classes", { p_phylum_id: phylum })
       .then(({ data, error }) => {
-        console.log("Classes recebidas:", data, "erro:", error);
         setClasses(data || []);
       });
   }, [phylum]);
