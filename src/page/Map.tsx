@@ -32,6 +32,8 @@ interface MapObservation {
   kingdom: string | null;
   is_protected: boolean;
   photo_url: string | null;
+  family_id: string | null;
+  family_name: string | null;
 }
 
 const createIcon = (color: string) =>
@@ -66,10 +68,25 @@ export default function Map() {
   // Filtros
   const [kingdom, setKingdom] = useState("ALL");
   const [speciesFilter, setSpeciesFilter] = useState("ALL");
-  const [observerFilter, setObserverFilter] = useState("ALL");
   const [timeRange, setTimeRange] = useState("ALL");
   const [protectedOnly, setProtectedOnly] = useState(false);
   const [viewMode, setViewMode] = useState<"markers" | "heatmap">("markers");
+
+  const [familyFilter, setFamilyFilter] = useState("ALL");
+
+  // Lista única de famílias (junto às outras listas)
+  const familyList = Array.from(
+    new window.Map(
+      observations
+        .filter((o) => o.family_id)
+        // Se um reino está selecionado, só famílias desse reino
+        .filter((o) => kingdom === "ALL" || o.kingdom === kingdom)
+        .map((o) => [
+          o.family_id,
+          { id: o.family_id!, name: o.family_name ?? "—" },
+        ]),
+    ).values(),
+  ).sort((a, b) => a.name.localeCompare(b.name));
 
   useEffect(() => {
     if (authLoading || !user) return;
@@ -100,9 +117,13 @@ export default function Map() {
 
   // Listas únicas para os dropdowns
   const speciesList = Array.from(
-    new Map(
+    new window.Map(
       observations
         .filter((o) => o.species_id)
+        // Depende do reino selecionado
+        .filter((o) => kingdom === "ALL" || o.kingdom === kingdom)
+        // Depende da família selecionada
+        .filter((o) => familyFilter === "ALL" || o.family_id === familyFilter)
         .map((o) => [
           o.species_id,
           { id: o.species_id!, name: o.scientific_name ?? "—" },
@@ -110,20 +131,11 @@ export default function Map() {
     ).values(),
   ).sort((a, b) => a.name.localeCompare(b.name));
 
-  const observersList = Array.from(
-    new Map(
-      observations.map((o) => [
-        o.user_id,
-        { id: o.user_id, name: o.full_name || o.username },
-      ]),
-    ).values(),
-  ).sort((a, b) => a.name.localeCompare(b.name));
-
   // Aplicar todos os filtros
   const filtered = observations.filter((o) => {
     if (kingdom !== "ALL" && o.kingdom !== kingdom) return false;
+    if (familyFilter !== "ALL" && o.family_id !== familyFilter) return false; // ← NOVO
     if (speciesFilter !== "ALL" && o.species_id !== speciesFilter) return false;
-    if (observerFilter !== "ALL" && o.user_id !== observerFilter) return false;
     if (protectedOnly && !o.is_protected) return false;
     const dateFrom = getDateFrom(timeRange);
     if (dateFrom !== null && new Date(o.observed_at).getTime() < dateFrom)
@@ -152,15 +164,15 @@ export default function Map() {
 
   const hasActiveFilters =
     kingdom !== "ALL" ||
+    familyFilter !== "ALL" ||
     speciesFilter !== "ALL" ||
-    observerFilter !== "ALL" ||
     timeRange !== "ALL" ||
     protectedOnly;
 
   const clearFilters = () => {
     setKingdom("ALL");
+    setFamilyFilter("ALL");
     setSpeciesFilter("ALL");
-    setObserverFilter("ALL");
     setTimeRange("ALL");
     setProtectedOnly(false);
   };
@@ -204,7 +216,14 @@ export default function Map() {
       <section className="mt-5 bg-white rounded-lg border border-stone-200 p-4">
         <div className="flex items-center gap-3 flex-wrap">
           {/* Reino */}
-          <Select value={kingdom} onValueChange={setKingdom}>
+          <Select
+            value={kingdom}
+            onValueChange={(v) => {
+              setKingdom(v);
+              setFamilyFilter("ALL");
+              setSpeciesFilter("ALL");
+            }}
+          >
             <SelectTrigger className="w-40 bg-white">
               <SelectValue placeholder="Reino" />
             </SelectTrigger>
@@ -222,6 +241,29 @@ export default function Map() {
             </SelectContent>
           </Select>
 
+          {/* Família */}
+          <Select
+            value={familyFilter}
+            onValueChange={(v) => {
+              setFamilyFilter(v);
+              setSpeciesFilter("ALL");
+            }}
+          >
+            <SelectTrigger className="w-44 bg-white">
+              <SelectValue placeholder="Família" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="ALL">Todas as famílias</SelectItem>
+                {familyList.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+
           {/* Espécie */}
           <Select value={speciesFilter} onValueChange={setSpeciesFilter}>
             <SelectTrigger className="w-48 bg-white">
@@ -233,23 +275,6 @@ export default function Map() {
                 {speciesList.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
                     {s.name}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-
-          {/* Observador */}
-          <Select value={observerFilter} onValueChange={setObserverFilter}>
-            <SelectTrigger className="w-48 bg-white">
-              <SelectValue placeholder="Observador" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="ALL">Todos os observadores</SelectItem>
-                {observersList.map((o) => (
-                  <SelectItem key={o.id} value={o.id}>
-                    {o.name}
                   </SelectItem>
                 ))}
               </SelectGroup>
