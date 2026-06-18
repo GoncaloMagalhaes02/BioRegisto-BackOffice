@@ -9,6 +9,7 @@ import {
   UserX,
   UserCheck,
   BrushCleaning,
+  Eye,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -48,6 +49,7 @@ import Avatar from "@/components/Avatar";
 import { TableSkeleton } from "@/components/states/LoadingState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { EmptyState } from "@/components/states/EmptyState";
+import { useNavigate } from "react-router-dom";
 
 interface UserRow {
   id: string;
@@ -102,6 +104,8 @@ export default function Users() {
 
   // Verificar se é admin
   const isAdmin = profile?.role === "ADMIN";
+
+  const navigate = useNavigate();
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -364,6 +368,12 @@ export default function Users() {
                             ) : (
                               <UserCheck size={16} />
                             )}
+                          </button>
+                          <button
+                            className="hover:cursor-pointer"
+                            onClick={() => navigate(`/users/${u.id}`)}
+                          >
+                            <Eye strokeWidth={1.2} />
                           </button>
                         </div>
                       </TableCell>
