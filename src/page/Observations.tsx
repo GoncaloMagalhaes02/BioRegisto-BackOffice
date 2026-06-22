@@ -59,11 +59,12 @@ export default function Observations() {
   const [search, setSearch] = useState("");
   const [observations, setObservations] = useState<ObservationWithPhoto[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pages, setPages] = useState("8");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  const itemsPerPage = 6;
+  const itemsPerPage = Number(pages);
 
   const sortedObservations = [...observations].sort((a, b) => {
     if (dateSort === "none") return 0;
@@ -77,7 +78,6 @@ export default function Observations() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
-
   const fetchObservations = async () => {
     setLoading(true);
     setError(false);
@@ -176,6 +176,19 @@ export default function Observations() {
     });
   };
 
+  const handlePagesChange = (v: string) => {
+    setPages(v);
+    setCurrentPage(1); // volta à primeira página
+  };
+
+  const clearFilters = () => {
+    setEstado("ALL");
+    setReino("ALL");
+    setTimeRange("ALL");
+    setCurrentPage(1);
+    console.log("limpa filtros");
+  };
+
   return (
     <>
       <header>
@@ -187,7 +200,7 @@ export default function Observations() {
       <section className="mt-8">
         <div className="flex flex-col md:flex-row items-center gap-3">
           <div className="w-full md:w-48">
-            <Select onValueChange={setEstado}>
+            <Select value={estado} onValueChange={setEstado}>
               <SelectTrigger className="w-full bg-white">
                 <SelectValue placeholder="Todos os estados" />
               </SelectTrigger>
@@ -203,7 +216,7 @@ export default function Observations() {
           </div>
 
           <div className="w-full md:w-48">
-            <Select onValueChange={setReino}>
+            <Select value={reino} onValueChange={setReino}>
               <SelectTrigger className="w-full bg-white">
                 <SelectValue placeholder="Todos os reinos" />
               </SelectTrigger>
@@ -241,6 +254,23 @@ export default function Observations() {
             </Select>
           </div>
 
+          <div className="w-full md:w-48">
+            <Select value={pages} onValueChange={handlePagesChange}>
+              <SelectTrigger className="w-full bg-white">
+                <SelectValue placeholder="Número por página" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="5">5 por página</SelectItem>
+                  <SelectItem value="8">8 por página</SelectItem>
+                  <SelectItem value="10">10 por página</SelectItem>
+                  <SelectItem value="20">20 por página</SelectItem>
+                  <SelectItem value="50">50 por página</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="relative w-full flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
             <Input
@@ -249,6 +279,14 @@ export default function Observations() {
               placeholder="Procure por espécie"
             />
           </div>
+
+          {/* Limpar filtros */}
+          <button
+            onClick={clearFilters}
+            className="text-xs text-stone-500 hover:text-stone-700 cursor-pointer underline ml-auto"
+          >
+            Limpar filtros
+          </button>
         </div>
       </section>
 
@@ -332,16 +370,17 @@ export default function Observations() {
                     </TableRow>
                   ))}
 
-                  {Array.from({
-                    length: itemsPerPage - paginatedObservations.length,
-                  }).map((_, i) => (
-                    <TableRow
-                      key={`empty-${i}`}
-                      className="h-[60px] max-h-[60px] hover:bg-transparent border-none"
-                    >
-                      <TableCell colSpan={7} className="py-0"></TableCell>
-                    </TableRow>
-                  ))}
+                  {totalPages > 1 &&
+                    Array.from({
+                      length: itemsPerPage - paginatedObservations.length,
+                    }).map((_, i) => (
+                      <TableRow
+                        key={`empty-${i}`}
+                        className="h-[60px] hover:bg-transparent border-none"
+                      >
+                        <TableCell colSpan={7} className="py-0"></TableCell>
+                      </TableRow>
+                    ))}
                 </>
               ) : (
                 <>

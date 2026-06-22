@@ -80,9 +80,9 @@ export default function Species() {
   const [searchInput, setSearchInput] = useState("");
   const [kingdom, setKingdom] = useState("ALL");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [pages, setPages] = useState("8");
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -157,11 +157,23 @@ export default function Species() {
   }, [user, authLoading, kingdom, search]);
 
   // Paginação
+
+  const itemsPerPage = Number(pages);
   const totalPages = Math.ceil(species.length / itemsPerPage);
   const paginatedSpecies = species.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
+
+  const handlePagesChange = (v: string) => {
+    setPages(v);
+    setCurrentPage(1); // volta à primeira página
+  };
+
+  const clearFilters = () => {
+    setKingdom("ALL");
+    setCurrentPage(1);
+  };
 
   return (
     <>
@@ -188,7 +200,7 @@ export default function Species() {
             />
           </div>
           <div className="w-full md:w-48">
-            <Select onValueChange={setKingdom}>
+            <Select value={kingdom} onValueChange={setKingdom}>
               <SelectTrigger className="w-full bg-white">
                 <SelectValue placeholder="Todos os reinos" />
               </SelectTrigger>
@@ -202,6 +214,30 @@ export default function Species() {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="w-full md:w-48">
+            <Select value={pages} onValueChange={handlePagesChange}>
+              <SelectTrigger className="w-full bg-white">
+                <SelectValue placeholder="Número por página" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="5">5 por página</SelectItem>
+                  <SelectItem value="8">8 por página</SelectItem>
+                  <SelectItem value="10">10 por página</SelectItem>
+                  <SelectItem value="20">20 por página</SelectItem>
+                  <SelectItem value="50">50 por página</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+          {/* Limpar filtros */}
+          <button
+            onClick={clearFilters}
+            className="text-xs text-stone-500 hover:text-stone-700 cursor-pointer underline ml-auto"
+          >
+            Limpar filtros
+          </button>
         </div>
       </section>
 
@@ -274,16 +310,18 @@ export default function Species() {
                   ))}
 
                   {/* Linhas vazias */}
-                  {Array.from({
-                    length: itemsPerPage - paginatedSpecies.length,
-                  }).map((_, i) => (
-                    <TableRow
-                      key={`empty-${i}`}
-                      className="h-[60px] hover:bg-transparent border-none"
-                    >
-                      <TableCell colSpan={7}></TableCell>
-                    </TableRow>
-                  ))}
+                  {totalPages > 1 &&
+                    Array.from({
+                      length: itemsPerPage - paginatedSpecies.length,
+                    }).map((_, i) => (
+                      <TableRow
+                        key={`empty-${i}`}
+                        className="h-[60px] hover:bg-transparent border-none"
+                      >
+                        <TableCell colSpan={7} className="py-0"></TableCell>{" "}
+                        {/* ← ajusta o colSpan para o nº de colunas da tabela de espécies */}
+                      </TableRow>
+                    ))}
                 </>
               ) : (
                 <>

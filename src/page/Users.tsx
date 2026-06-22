@@ -4,7 +4,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import {
   Search,
-  MoreVertical,
   ShieldCheck,
   UserX,
   UserCheck,
@@ -91,7 +90,7 @@ export default function Users() {
   const [searchInput, setSearchInput] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6;
+  const [pages, setPages] = useState("8");
 
   // Dialogs
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
@@ -102,13 +101,26 @@ export default function Users() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
-  // Verificar se é admin
   const isAdmin = profile?.role === "ADMIN";
-
   const navigate = useNavigate();
+
+  const itemsPerPage = Number(pages);
+
+  const handlePagesChange = (v: string) => {
+    setPages(v);
+    setCurrentPage(1);
+  };
+
+  const clearFilters = () => {
+    setRoleFilter("ALL");
+    setSearchInput("");
+    setSearch("");
+    setCurrentPage(1);
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
+    setError(false);
     try {
       const { data, error } = await supabase.rpc("get_users_with_stats");
       if (error) throw error;
@@ -139,7 +151,6 @@ export default function Users() {
     }
   };
 
-  // Debounce
   useEffect(() => {
     const timer = setTimeout(() => setSearch(searchInput), 300);
     return () => clearTimeout(timer);
@@ -249,8 +260,9 @@ export default function Users() {
               onChange={(e) => setSearchInput(e.target.value)}
             />
           </div>
+
           <div className="w-full md:w-48">
-            <Select onValueChange={setRoleFilter}>
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
               <SelectTrigger className="w-full bg-white">
                 <SelectValue placeholder="Todas as roles" />
               </SelectTrigger>
@@ -264,12 +276,36 @@ export default function Users() {
               </SelectContent>
             </Select>
           </div>
+
+          <div className="w-full md:w-48">
+            <Select value={pages} onValueChange={handlePagesChange}>
+              <SelectTrigger className="w-full bg-white">
+                <SelectValue placeholder="Número por página" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="5">5 por página</SelectItem>
+                  <SelectItem value="8">8 por página</SelectItem>
+                  <SelectItem value="10">10 por página</SelectItem>
+                  <SelectItem value="20">20 por página</SelectItem>
+                  <SelectItem value="50">50 por página</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <button
+            onClick={clearFilters}
+            className="text-xs text-stone-500 hover:text-stone-700 cursor-pointer underline whitespace-nowrap"
+          >
+            Limpar filtros
+          </button>
         </div>
       </section>
 
       {/* Tabela */}
       {loading ? (
-        <TableSkeleton rows={6} cols={8} />
+        <TableSkeleton rows={itemsPerPage} cols={8} />
       ) : error ? (
         <ErrorState onRetry={fetchUsers} />
       ) : users.length === 0 ? (
@@ -294,120 +330,98 @@ export default function Users() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedUsers.length > 0 ? (
-                <>
-                  {paginatedUsers.map((u) => (
-                    <TableRow key={u.id} className="h-[60px]">
-                      <TableCell>
-                        <Avatar
-                          name={u.full_name}
-                          username={u.username}
-                          avatarUrl={u.avatar_url}
-                          size={36}
-                        />
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {u.full_name ?? "—"}
-                      </TableCell>
-                      <TableCell className="text-stone-500">
-                        @{u.username}
-                      </TableCell>
-                      <TableCell className="text-stone-500">
-                        {u.email}
-                      </TableCell>
-                      <TableCell>
-                        <RoleBadge role={u.role} />
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          {u.validated_observations}/{u.total_observations}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {u.is_active ? (
-                          <span className="text-xs text-green-700 font-medium">
-                            Ativo
-                          </span>
-                        ) : (
-                          <span className="text-xs text-red-500 font-medium">
-                            Inativo
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => {
-                              setEditingUser(u);
-                              setNewRole(u.role);
-                            }}
-                            disabled={u.id === user?.id}
-                            className="px-3 py-1.5 text-xs rounded-lg border border-stone-200 hover:bg-stone-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                            title={
-                              u.id === user?.id
-                                ? "Não podes alterar a tua própria role"
-                                : "Alterar role"
-                            }
-                          >
-                            Alterar role
-                          </button>
-                          <button
-                            onClick={() => setToggleUser(u)}
-                            disabled={u.id === user?.id}
-                            className={`p-1.5 rounded-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
-                              u.is_active
-                                ? "text-red-500 hover:bg-red-50"
-                                : "text-green-600 hover:bg-green-50"
-                            }`}
-                            title={
-                              u.is_active ? "Desativar conta" : "Ativar conta"
-                            }
-                          >
-                            {u.is_active ? (
-                              <UserX size={16} />
-                            ) : (
-                              <UserCheck size={16} />
-                            )}
-                          </button>
-                          <button
-                            className="hover:cursor-pointer"
-                            onClick={() => navigate(`/users/${u.id}`)}
-                          >
-                            <Eye strokeWidth={1.2} />
-                          </button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-
-                  {Array.from({
-                    length: itemsPerPage - paginatedUsers.length,
-                  }).map((_, i) => (
-                    <TableRow
-                      key={`empty-${i}`}
-                      className="h-[60px] hover:bg-transparent border-none"
-                    >
-                      <TableCell colSpan={8} className="py-0"></TableCell>
-                    </TableRow>
-                  ))}
-                </>
-              ) : (
-                <>
-                  {Array.from({ length: itemsPerPage }).map((_, i) => (
-                    <TableRow
-                      key={`empty-${i}`}
-                      className="h-[60px] hover:bg-transparent border-none"
-                    >
-                      <TableCell
-                        colSpan={8}
-                        className={`py-0 ${i === 0 ? "text-center text-stone-400" : ""}`}
+              {paginatedUsers.map((u) => (
+                <TableRow key={u.id} className="h-[60px]">
+                  <TableCell>
+                    <Avatar
+                      name={u.full_name}
+                      username={u.username}
+                      avatarUrl={u.avatar_url}
+                      size={36}
+                    />
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    {u.full_name ?? "—"}
+                  </TableCell>
+                  <TableCell className="text-stone-500">
+                    @{u.username}
+                  </TableCell>
+                  <TableCell className="text-stone-500">{u.email}</TableCell>
+                  <TableCell>
+                    <RoleBadge role={u.role} />
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm">
+                      {u.validated_observations}/{u.total_observations}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    {u.is_active ? (
+                      <span className="text-xs text-green-700 font-medium">
+                        Ativo
+                      </span>
+                    ) : (
+                      <span className="text-xs text-red-500 font-medium">
+                        Inativo
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => {
+                          setEditingUser(u);
+                          setNewRole(u.role);
+                        }}
+                        disabled={u.id === user?.id}
+                        className="px-3 py-1.5 text-xs rounded-lg border border-stone-200 hover:bg-stone-50 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={
+                          u.id === user?.id
+                            ? "Não podes alterar a tua própria role"
+                            : "Alterar role"
+                        }
                       >
-                        {i === 0 ? "Nenhum utilizador encontrado." : ""}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </>
-              )}
+                        Alterar role
+                      </button>
+                      <button
+                        onClick={() => setToggleUser(u)}
+                        disabled={u.id === user?.id}
+                        className={`p-1.5 rounded-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                          u.is_active
+                            ? "text-red-500 hover:bg-red-50"
+                            : "text-green-600 hover:bg-green-50"
+                        }`}
+                        title={u.is_active ? "Desativar conta" : "Ativar conta"}
+                      >
+                        {u.is_active ? (
+                          <UserX size={16} />
+                        ) : (
+                          <UserCheck size={16} />
+                        )}
+                      </button>
+                      <button
+                        className="hover:cursor-pointer"
+                        onClick={() => navigate(`/users/${u.id}`)}
+                      >
+                        <Eye strokeWidth={1.2} />
+                      </button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+
+              {/* Linhas vazias — só preenche quando há mais páginas */}
+              {totalPages > 1 &&
+                Array.from({
+                  length: itemsPerPage - paginatedUsers.length,
+                }).map((_, i) => (
+                  <TableRow
+                    key={`empty-${i}`}
+                    className="h-[60px] hover:bg-transparent border-none"
+                  >
+                    <TableCell colSpan={8} className="py-0"></TableCell>
+                  </TableRow>
+                ))}
             </TableBody>
           </Table>
 
