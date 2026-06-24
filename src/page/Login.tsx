@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Mail, Lock, EyeOff, Eye, CircleCheck, CircleX } from "lucide-react";
 
 import { supabase } from "@/lib/supabaseClient";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import image from "../assets/BioRegisto-02.png";
@@ -108,12 +108,12 @@ function Login() {
                 </div>
               </div>
               <div className="mt-3 text-right">
-                <a
-                  href="#"
-                  className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
+                <Link
+                  to="/forgot-password"
+                  className="text-sm text-[#2D5A3D] hover:underline cursor-pointer"
                 >
                   Esqueceu a palavra-passe?
-                </a>
+                </Link>
               </div>
               <CardFooter className="flex-col gap-2">
                 <Button

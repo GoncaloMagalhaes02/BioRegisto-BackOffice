@@ -25,11 +25,15 @@ import EditSpecies from "./page/EditSpecies";
 import { Toaster } from "./components/ui/sonner";
 import Map from "./page/Map";
 import { StatsProvider } from "./hooks/useObservationsStats";
+import ForgotPassword from "./page/ForgotPassword";
+import ResetPassword from "./page/ResetPassword";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
     <>
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       {/* Rotas protegidas — todas partilham o Layout */}
       <Route element={<ProtectedLayout />}>
         <Route path="/" element={<Dashboard />} />

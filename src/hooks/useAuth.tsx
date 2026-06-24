@@ -52,6 +52,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!isMounted) return;
 
+      if (event === "PASSWORD_RECOVERY") return;
+
       setUser(session?.user ?? null);
 
       if (session?.user) {

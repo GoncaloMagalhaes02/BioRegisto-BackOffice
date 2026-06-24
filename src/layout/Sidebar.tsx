@@ -97,26 +97,28 @@ export default function Sidebar() {
 
       {/* Perfil do utilizador */}
       <div className="px-4 py-4 border-t border-stone-200">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-800 text-xs font-medium flex-shrink-0">
-            {getInitials(profile?.full_name ?? null)}
+        <Link to={`/users/${profile?.id}`}>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-800 text-xs font-medium flex-shrink-0">
+              {getInitials(profile?.full_name ?? null)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-stone-700 truncate">
+                {profile?.full_name ?? "Utilizador"}
+              </p>
+              <p className="text-[10px] text-stone-400 capitalize">
+                {profile?.role?.toLowerCase() ?? "..."}
+              </p>
+            </div>
+            <button
+              onClick={signOut}
+              className="text-stone-400 hover:text-stone-600 cursor-pointer"
+              title="Sair"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-stone-700 truncate">
-              {profile?.full_name ?? "Utilizador"}
-            </p>
-            <p className="text-[10px] text-stone-400 capitalize">
-              {profile?.role?.toLowerCase() ?? "..."}
-            </p>
-          </div>
-          <button
-            onClick={signOut}
-            className="text-stone-400 hover:text-stone-600 cursor-pointer"
-            title="Sair"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
+        </Link>
       </div>
     </aside>
   );
