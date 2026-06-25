@@ -99,8 +99,16 @@ export default function Sidebar() {
       <div className="px-4 py-4 border-t border-stone-200">
         <Link to={`/users/${profile?.id}`}>
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-800 text-xs font-medium flex-shrink-0">
-              {getInitials(profile?.full_name ?? null)}
+            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-800 text-xs font-medium flex-shrink-0 overflow-hidden">
+              {profile?.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt={profile.full_name ?? "Avatar"}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                getInitials(profile?.full_name ?? null)
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-stone-700 truncate">
