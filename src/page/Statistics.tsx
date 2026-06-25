@@ -284,7 +284,7 @@ export default function Statistics() {
                       <span className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center text-xs font-medium text-stone-500">
                         {i + 1}
                       </span>
-                      <Avatar name={obs.username} />
+                      <Avatar name={obs.username} avatarUrl={obs.avatar_url} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">
                           {obs.full_name}
